@@ -8,7 +8,7 @@ tocan el mismo archivo (ver [`02-plan-de-commits.md`](02-plan-de-commits.md)).
 
 | Integrante | Rol | Directorios/archivos propios | Ramas |
 |---|---|---|---|
-| **Marcos Escobar** | Arquitectura · API Gateway · Integración | fundación (raíz: `.gitignore`, `docker-compose.yml`, `benchmark.js`, `TABLERO_KANBAN.md`, README stub) · `gateway/` completo | `chore/setup-monorepo`, `feat/gateway` |
+| **Marcos Escobar** | Arquitectura · API Gateway · Integración | commit inicial (`.gitignore`, README stub) · fundación (`docker-compose.yml`, `benchmark.js`, `TABLERO_KANBAN.md`) · `gateway/` completo | commit inicial en `main`, `chore/setup-monorepo`, `feat/gateway` |
 | **Mateo Sosa** | Backend · Transportes (TCP + Redis) | `ms-pedidos/`, `ms-inventario/` | `feat/ms-inventario`, `feat/ms-pedidos` |
 | **Stefany Díaz** | Persistencia · Documentación · QA · Mediciones | `ms-productos/`, `docs/`, `README.md` final | `feat/ms-productos`, `docs/avance1` |
 
@@ -17,8 +17,8 @@ tocan el mismo archivo (ver [`02-plan-de-commits.md`](02-plan-de-commits.md)).
 | Tarjeta Kanban (Avance 1) | Responsable | Rama donde se resuelve |
 |---|---|---|
 | Definir dominio del MVP (3 MS + Gateway) | Todos (Marcos coordina) | — (definición previa) |
-| Crear repo, proteger `main`, ramas base | Marcos | `chore/setup-monorepo` |
-| Docker Compose base (Gateway + 3 MS + Redis + Postgres) | Marcos | `chore/setup-monorepo` |
+| Inicializar repo (crea `main`), proteger `main` | Marcos | commit inicial en `main` |
+| Docker Compose base + `benchmark.js` + tablero (Gateway + 3 MS + Redis + Postgres) | Marcos | `chore/setup-monorepo` |
 | MS 1 — Catálogo (CRUD + persistencia) | Stefany | `feat/ms-productos` |
 | MS 2 — Inventario (CRUD + persistencia) | Mateo | `feat/ms-inventario` |
 | MS 3 — Pedidos (CRUD + persistencia) | Mateo | `feat/ms-pedidos` |
