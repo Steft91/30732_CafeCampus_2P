@@ -1,11 +1,12 @@
 # Evidencias
 
-Guardar aqui capturas y salidas de comandos para cada avance.
+Esta carpeta guarda las evidencias usadas en el `README.md`.
 
-Sugerencia de nombres:
+## Avance 1
 
-- `avance1-benchmark-sync.txt`
-- `avance1-benchmark-async.txt`
-- `avance1-caida-sync.png`
-- `avance1-caida-async.png`
-- `avance1-kanban.png`
+- `avance1-benchmark-sync.txt`: salida del benchmark del camino sincrono TCP.
+- `avance1-benchmark-async.txt`: salida del benchmark del camino asincrono Redis.
+- `avance1-caida-servicio.txt`: prueba textual de acoplamiento temporal.
+- `sync.png`: captura del error 503 cuando MS Inventario esta apagado.
+- `async.png`: captura del endpoint asincrono aceptado con Redis.
+- `avance1-kanban.png`: captura del tablero Kanban.

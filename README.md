@@ -191,11 +191,21 @@ curl http://localhost:3000/api/benchmark/async
 
 El flujo asincrono debe aceptar la peticion aunque el consumidor no este procesando en ese momento.
 
-Evidencia guardada:
+Evidencia guardada en archivos de texto:
 
 - `docs/avance1-benchmark-sync.txt`
 - `docs/avance1-benchmark-async.txt`
 - `docs/avance1-caida-servicio.txt`
+
+Evidencia visual:
+
+**Falla del camino sincrono al apagar MS Inventario**
+
+![Falla del camino sincrono](docs/sync.png)
+
+**Aceptacion del camino asincrono con Redis**
+
+![Aceptacion del camino asincrono](docs/async.png)
 
 ### Analisis
 
@@ -205,9 +215,13 @@ En el camino asincrono, el Gateway publica un evento en Redis y responde cuando 
 
 ## Metodologia
 
-- **Kanban:** ver `TABLERO_KANBAN.md`. Capturas del tablero en `/docs`.
+- **Kanban:** ver `TABLERO_KANBAN.md`.
 - **Ramificacion:** GitHub Flow con `main`, ramas `feat/...`, `fix/...`, `docs/...`, `refactor/...`.
 - **Commits semanticos:** Conventional Commits.
+
+Captura del tablero del Avance 1:
+
+![Tablero Kanban Avance 1](docs/avance1-kanban.png)
 
 Ejemplos:
 
