@@ -1,0 +1,44 @@
+Prueba de acoplamiento temporal - Avance 1
+
+Contexto:
+- Gateway activo.
+- MS Pedidos activo.
+- Redis activo.
+- MS Inventario apagado manualmente con Ctrl + C.
+
+Camino sincrono TCP:
+
+curl http://localhost:3000/api/benchmark/sync
+
+Respuesta:
+
+{
+  "message": "Camino síncrono no disponible: MS Pedidos o MS Inventario no respondió",
+  "error": "Service Unavailable",
+  "statusCode": 503
+}
+
+Interpretacion:
+La peticion falla porque el camino sincrono Gateway -> MS Pedidos -> MS Inventario requiere que todos los servicios esten vivos al mismo tiempo.
+
+Camino asincrono Redis:
+
+curl http://localhost:3000/api/benchmark/async
+
+Respuesta:
+
+{
+  "camino": "asincrono-redis",
+  "descripcion": "Gateway publica evento Redis; el consumidor procesa sin bloquear",
+  "aceptado": true,
+  "duracionMs": 1,
+  "evento": {
+    "pedidoId": "bench-1783991214636",
+    "productoId": "demo-cappuccino",
+    "cantidad": 2,
+    "creadoEn": "2026-07-14T01:06:54.636Z"
+  }
+}
+
+Interpretacion:
+El Gateway acepta la peticion porque solo necesita publicar en Redis. El consumidor no bloquea la respuesta del emisor.
