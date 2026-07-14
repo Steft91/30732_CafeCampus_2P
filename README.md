@@ -1,110 +1,117 @@
 # Cafe Campus
 
-> MVP de arquitectura de microservicios para una cafeteria universitaria.
+> MVP de arquitectura de microservicios · Aplicaciones Distribuidas · 7.º semestre · Entrega por avances.
+
+Cafe Campus es un sistema de cafetería universitaria construido como **monorepo de microservicios**
+(NestJS + TypeScript + Prisma + PostgreSQL). El objetivo pedagógico es **demostrar con datos reales
+el acoplamiento temporal y la acumulación de latencia** entre comunicación síncrona y asíncrona.
 
 ## Equipo
 
-| Integrante | Rol | GitHub |
-|---|---|---|
-| Stefy | Backend / Arquitectura | @Steft91 |
-| Por definir | Transportes / gRPC | - |
-| Por definir | Seguridad / Observabilidad | - |
-| Por definir | Documentacion / QA | - |
+| Integrante     | Rol                                            | GitHub      |
+| -------------- | ---------------------------------------------- | ----------- |
+| Marcos Escobar | Arquitectura · API Gateway · Integración       | @IMarcusDev |
+| Mateo Sosa     | Backend · Transportes (TCP + Redis)            | @MatSosa1   |
+| Stefany Díaz   | Persistencia · Documentación · QA · Mediciones | @Steft91    |
 
-## Descripcion del MVP
+## Descripción del MVP
 
-Cafe Campus permite administrar el catalogo de productos, registrar pedidos de estudiantes y controlar el inventario de la cafeteria. El dominio se mantiene sencillo para centrar la entrega en comunicacion entre microservicios, evidencia de latencia, acoplamiento temporal y documentacion del proceso.
+Cafe Campus administra el catálogo de productos, registra pedidos de estudiantes y controla el
+inventario de la cafetería. El dominio se mantiene **deliberadamente simple** para centrar el
+esfuerzo en la **arquitectura de comunicación**, las buenas prácticas y la evidencia medible, no
+en la lógica de negocio.
 
-- **MS Productos:** administra catalogo, categorias, precios y disponibilidad.
-- **MS Pedidos:** registra pedidos, calcula totales y coordina validacion/descuento de stock.
-- **MS Inventario:** controla existencias, movimientos de entrada/salida y alertas de bajo stock.
-- **API Gateway:** punto unico de entrada HTTP, autenticacion JWT y proxy hacia servicios internos.
+- **MS Productos:** catálogo, categorías, precios y disponibilidad (solo HTTP).
+- **MS Pedidos:** registra pedidos, calcula totales y coordina validación/descuento de stock.
+- **MS Inventario:** controla existencias y movimientos; expone los handlers de benchmark.
+- **API Gateway:** punto único de entrada HTTP, autenticación JWT y proxy hacia los servicios.
 
 ## Stack
 
-- **Framework:** NestJS + TypeScript.
-- **Persistencia:** PostgreSQL con schemas separados.
-- **ORM:** Prisma.
-- **Sincorno Avance 1:** TCP con `@nestjs/microservices`.
-- **Asincrono Avance 1:** Redis PUB/SUB con `@nestjs/microservices`.
-- **Seguridad base:** JWT + Guards por rol en Gateway.
-- **Contenedores:** Docker Compose.
+- **Framework:** NestJS + TypeScript · **Estructura:** monorepo (4 apps independientes).
+- **Síncrono (Avance 1):** TCP con `@nestjs/microservices` · **Eventos (Avance 1):** Redis PUB/SUB.
+- **Persistencia:** PostgreSQL (un `schema` por servicio) · **ORM:** Prisma.
+- **Seguridad base:** JWT + Guards por rol en el Gateway · **Contenedores:** Docker Compose.
 
-> Nota: la guia menciona TypeORM como referencia de clase. Este proyecto conserva Prisma porque ya estaba integrado y cumple el rol de ORM para PostgreSQL.
+> **Equivalencia con lo visto en clase:** la guía sugiere **TypeORM**; este proyecto usa **Prisma**,
+> que cumple el mismo rol de ORM sobre PostgreSQL. El camino síncrono usa **TCP** y el asíncrono
+> **Redis pub/sub**, tal como sugiere el material. En Avance 2 se añadirán gRPC y un segundo transporte.
 
-## Como ejecutar
+## Cómo ejecutar
 
-### Opcion A: Docker Compose
+### Opción A — Docker Compose (un solo comando)
 
 ```bash
 docker compose up -d
 docker compose ps
-```
 
-Endpoints principales:
-
-```bash
 curl http://localhost:3000/api/benchmark/sync
 curl http://localhost:3000/api/benchmark/async
 ```
 
-### Opcion B: Local
+### Opción B — Local (sin Docker)
 
-Levantar PostgreSQL y Redis:
-
-```bash
-docker start postgres-dev
-docker run -d --name cafe-campus-redis -p 6379:6379 redis:7-alpine
-```
-
-Luego levantar los servicios en terminales separadas:
+Levantar PostgreSQL y Redis, ejecutar migraciones y arrancar en orden:
 
 ```bash
+# 1) Migraciones (dentro de cada servicio con Prisma)
+cd ms-productos  && npx prisma migrate dev --schema src/prisma/schema.prisma && npm run seed
+cd ../ms-inventario && npx prisma migrate dev --schema src/prisma/schema.prisma && npm run seed
+cd ../ms-pedidos && npx prisma migrate dev --schema src/prisma/schema.prisma
+
+# 2) Arranque en orden
 cd ms-productos && npm run start:dev
 cd ms-inventario && npm run start:dev
 cd ms-pedidos && npm run start:dev
 cd gateway && npm run start:dev
 ```
 
-Orden recomendado:
+### Puertos
 
-1. `ms-productos`
-2. `ms-inventario`
-3. `ms-pedidos`
-4. `gateway`
+| Servicio      | HTTP                  | TCP (microservicio)       |
+| ------------- | --------------------- | ------------------------- |
+| gateway       | 3000 (prefijo `/api`) | —                         |
+| ms-productos  | 3001                  | —                         |
+| ms-pedidos    | 3002                  | 4002                      |
+| ms-inventario | 3003                  | 4003 (+ suscriptor Redis) |
 
-## Base de datos
+## Arquitectura
 
-Cada microservicio usa su propio schema dentro de PostgreSQL:
+![Arquitectura Avance 1](docs/planificacion-avance1/arquitectura-avance1.png)
 
-- `productos_schema`
-- `pedidos_schema`
-- `inventario_schema`
+> Diagrama generado con **PlantUML**. Fuente:
+> [`arquitectura-avance1.puml`](docs/planificacion-avance1/arquitectura-avance1.puml) ·
+> versión vectorial: [`arquitectura-avance1.svg`](docs/planificacion-avance1/arquitectura-avance1.svg).
+> Regenerar con: `plantuml -tpng docs/planificacion-avance1/arquitectura-avance1.puml`
 
-Ejemplo local usado durante desarrollo:
+Vista simplificada de los dos caminos:
 
-```env
-DATABASE_URL="postgresql://stefy:1234@localhost:5432/coffee?schema=productos_schema"
+```mermaid
+flowchart LR
+    cliente([Cliente / Postman])
+    gw[API Gateway<br/>HTTP :3000 · JWT]
+    prod[MS Productos<br/>HTTP :3001]
+    ped[MS Pedidos<br/>HTTP :3002 · TCP :4002]
+    inv[MS Inventario<br/>HTTP :3003 · TCP :4003]
+    pg[(PostgreSQL<br/>3 schemas)]
+    redis[[Redis<br/>pub/sub]]
+
+    cliente --> gw
+    gw -. HTTP dominio .-> prod
+    gw -. HTTP dominio .-> ped
+    gw -. HTTP dominio .-> inv
+    ped -. HTTP validar/descontar .-> inv
+    prod --> pg
+    ped --> pg
+    inv --> pg
+
+    gw == 1 TCP benchmark.sync ==> ped
+    ped == 2 TCP stock-check ==> inv
+    gw == emit pedido.creado.async ==> redis
+    redis == EventPattern ==> inv
 ```
 
-Ejecutar migraciones:
-
-```bash
-cd ms-productos
-npx prisma migrate dev --schema src/prisma/schema.prisma
-npm run seed
-
-cd ../ms-pedidos
-npx prisma migrate dev --schema src/prisma/schema.prisma
-
-cd ../ms-inventario
-npx prisma migrate dev --schema src/prisma/schema.prisma
-npm run seed
-```
-
-## Arquitectura Avance 1
-
-### Camino sincrono TCP
+### Camino síncrono (TCP)
 
 ```mermaid
 sequenceDiagram
@@ -112,18 +119,15 @@ sequenceDiagram
     participant Gateway
     participant Pedidos as MS Pedidos
     participant Inventario as MS Inventario
-
     Cliente->>Gateway: GET /api/benchmark/sync
     Gateway->>Pedidos: TCP benchmark.sync
     Pedidos->>Inventario: TCP benchmark.stock-check
     Inventario-->>Pedidos: stock validado
     Pedidos-->>Gateway: respuesta encadenada
-    Gateway-->>Cliente: resultado
+    Gateway-->>Cliente: resultado (~104 ms)
 ```
 
-Este camino evidencia acumulacion de latencia porque el Gateway espera a Pedidos, y Pedidos espera a Inventario.
-
-### Camino asincrono Redis
+### Camino asíncrono (Redis)
 
 ```mermaid
 sequenceDiagram
@@ -131,109 +135,119 @@ sequenceDiagram
     participant Gateway
     participant Redis
     participant Inventario as MS Inventario
-
     Cliente->>Gateway: GET /api/benchmark/async
     Gateway->>Redis: publish pedido.creado.async
-    Gateway-->>Cliente: aceptado
+    Gateway-->>Cliente: aceptado (~1.5 ms)
     Redis-->>Inventario: evento
     Inventario->>Inventario: procesa sin bloquear al Gateway
 ```
 
-Este camino evidencia desacoplamiento temporal: el Gateway no espera el procesamiento del consumidor.
+## Metodología
+
+- **Kanban:** ver [`TABLERO_KANBAN.md`](TABLERO_KANBAN.md) y el reparto en
+  [`docs/planificacion-avance1/01-roles-y-kanban.md`](docs/planificacion-avance1/01-roles-y-kanban.md)
+  (captura en `docs/avance1-kanban.png`).
+- **Ramificación:** **GitHub Flow** — `main` protegida, ramas `feat/…`, `chore/…`, `docs/…`, PRs
+  revisados por otro integrante, y un **tag por avance**. Plan detallado (propiedad por directorio
+  para evitar choques) en
+  [`docs/planificacion-avance1/02-plan-de-commits.md`](docs/planificacion-avance1/02-plan-de-commits.md).
+- **Commits semánticos:** Conventional Commits `tipo(alcance): descripción`. Ejemplos:
+    ```
+    feat(tcp): agregar handler tcp de verificacion de stock
+    feat(redis): agregar consumidor asincrono de eventos de pedido
+    feat(gateway): agregar proxy http hacia ms-pedidos
+    docs(readme): completar seccion avance 1 con analisis y evidencia
+    ```
 
 ## Patrones y principios aplicados
 
-- **API Gateway:** centraliza entrada HTTP, seguridad y ruteo.
-- **Proxy:** el Gateway reenvia peticiones hacia microservicios internos.
-- **Publisher/Subscriber:** Redis permite publicar eventos sin esperar al consumidor.
-- **DTO + ValidationPipe:** separa validacion de entrada de la logica de negocio.
-- **DIP / Inyeccion de dependencias:** servicios Nest reciben dependencias por constructor.
-- **SRP:** cada microservicio tiene una responsabilidad principal.
-- **Manejo de excepciones:** servicios controlan errores y devuelven respuestas HTTP consistentes.
+Resumen (detalle y justificación en
+[`docs/planificacion-avance1/03-patrones-y-principios.md`](docs/planificacion-avance1/03-patrones-y-principios.md)):
 
-## Avance 1 - Acoplamiento temporal y latencia
+| Patrón / Principio                                                            | ¿Framework o equipo?                  |
+| ----------------------------------------------------------------------------- | ------------------------------------- |
+| API Gateway, Proxy                                                            | Diseñado por el equipo                |
+| Publisher/Subscriber (Redis), Request/Response (TCP)                          | Equipo (sobre transportes de Nest)    |
+| DTO + `ValidationPipe`, Inyección de dependencias, Módulos, Exception Filters | Aporta NestJS, usados deliberadamente |
+| SRP, DIP, aislamiento de datos por `schema`                                   | Diseño del equipo                     |
 
-### Endpoints de evidencia
+---
 
-| Camino | Endpoint | Transporte |
-|---|---|---|
-| Sincrono | `GET /api/benchmark/sync` | TCP |
-| Asincrono | `GET /api/benchmark/async` | Redis |
+## Avance 1 — Acoplamiento temporal y latencia · `tag v1-avance1`
 
-### Benchmark
+### Caminos
+
+- **Síncrono (TCP):** Gateway → MS Pedidos → MS Inventario (cada salto espera al siguiente).
+- **Asíncrono (Redis):** Gateway publica el evento y responde sin esperar al consumidor.
+
+| Camino    | Endpoint                   | Transporte |
+| --------- | -------------------------- | ---------- |
+| Síncrono  | `GET /api/benchmark/sync`  | TCP        |
+| Asíncrono | `GET /api/benchmark/async` | Redis      |
+
+### Latencia (200 peticiones, `benchmark.js`)
 
 ```bash
 node benchmark.js http://localhost:3000/api/benchmark/sync 200 > docs/avance1-benchmark-sync.txt
 node benchmark.js http://localhost:3000/api/benchmark/async 200 > docs/avance1-benchmark-async.txt
 ```
 
-| Camino | Promedio (ms) | p95 (ms) | Max (ms) |
-|---|---:|---:|---:|
-| Sincrono TCP | 103.76 | 105.00 | 162.00 |
-| Asincrono Redis | 1.56 | 2.00 | 65.00 |
+| Camino          | Promedio (ms) | p95 (ms) | Máx (ms) | Errores |
+| --------------- | ------------: | -------: | -------: | ------: |
+| Síncrono TCP    |    **103.76** |   105.00 |   162.00 |       0 |
+| Asíncrono Redis |      **1.56** |     2.00 |    65.00 |       0 |
 
-### Prueba de acoplamiento temporal
+### Acoplamiento temporal (prueba de caída)
 
-1. Levantar todos los servicios.
-2. Ejecutar:
+Con el stack arriba, se apaga **MS Inventario** (Ctrl+C) y se repiten las peticiones
+(evidencia en `docs/avance1-caida-servicio.txt`):
 
-```bash
-curl http://localhost:3000/api/benchmark/sync
-```
+- **Síncrono → falla** con `503 Service Unavailable`: la cadena Gateway→Pedidos→Inventario
+  requiere que todos estén vivos a la vez.
+- **Asíncrono → se acepta igual** (`"aceptado": true`, ~1 ms): el Gateway solo publica en Redis;
+  el consumidor procesará después.
 
-3. Apagar `ms-inventario`.
-4. Repetir el `curl`: el camino sincrono debe fallar porque Pedidos depende temporalmente de Inventario.
-5. Con Redis activo, ejecutar:
+**Falla del camino síncrono al apagar MS Inventario**
 
-```bash
-curl http://localhost:3000/api/benchmark/async
-```
+![Falla del camino síncrono](docs/sync.png)
 
-El flujo asincrono debe aceptar la peticion aunque el consumidor no este procesando en ese momento.
+**Aceptación del camino asíncrono con Redis**
 
-Evidencia guardada en archivos de texto:
+![Aceptación del camino asíncrono](docs/async.png)
 
-- `docs/avance1-benchmark-sync.txt`
-- `docs/avance1-benchmark-async.txt`
-- `docs/avance1-caida-servicio.txt`
+### Análisis
 
-Evidencia visual:
+En el camino **síncrono**, cada salto **bloquea** al anterior hasta recibir respuesta, por lo que
+los tiempos **se suman**: el promedio de **103.76 ms** coincide con los retardos artificiales de
+Pedidos (40 ms) e Inventario (60 ms) más el costo de dos saltos TCP. Además hay **acoplamiento
+temporal**: al caer Inventario, la petición falla con **503** porque los tres servicios deben
+coexistir para completar la operación.
 
-**Falla del camino sincrono al apagar MS Inventario**
+En el camino **asíncrono**, el Gateway publica un evento en Redis y responde apenas el broker
+acepta el mensaje (**1.56 ms** de promedio); el consumidor procesa después, con su propio retardo
+que **no** cuenta para la respuesta del emisor. Por eso, al apagar el consumidor, la petición se
+sigue aceptando: el emisor está **desacoplado en el tiempo** del consumidor (a cambio de
+consistencia eventual). Análisis ampliado en
+[`docs/planificacion-avance1/04-analisis-latencia-acoplamiento.md`](docs/planificacion-avance1/04-analisis-latencia-acoplamiento.md).
 
-![Falla del camino sincrono](docs/sync.png)
+---
 
-**Aceptacion del camino asincrono con Redis**
+## Avance 2 — Comunicación: gRPC + 2.º transporte + excepciones · `tag v2-avance2`
 
-![Aceptacion del camino asincrono](docs/async.png)
+_Pendiente._ Contrato `.proto` (gRPC) entre dos microservicios, segundo transporte
+(RabbitMQ/MQTT/NATS), tabla comparativa de transportes y manejo de excepciones con evidencia.
 
-### Analisis
+## Avance 3 — Seguridad, observabilidad e integración (FINAL) · `tag v3-final`
 
-En el camino sincrono las latencias se acumulan porque cada salto bloquea al anterior hasta recibir respuesta. En la medicion realizada, el endpoint TCP obtuvo un promedio de **103.76 ms**, coherente con la suma de los tiempos artificiales configurados en Pedidos e Inventario mas el costo de comunicacion entre procesos. Este modelo tambien produce acoplamiento temporal: al apagar MS Inventario, la peticion sincrona fallo con **503 Service Unavailable** porque Gateway, Pedidos e Inventario deben estar vivos al mismo tiempo para completar la operacion.
+_Pendiente._ Login que emite JWT y Guard que protege rutas (200 con token / 401 sin token / 403 por
+rol), observabilidad con Sentry, integración final y sección de defensa.
 
-En el camino asincrono, el Gateway publica un evento en Redis y responde cuando el broker acepta el mensaje. El consumidor puede procesarlo despues, por eso el emisor no queda bloqueado por el tiempo de trabajo del consumidor. La medicion reflejo un promedio de **1.56 ms** y, al apagar MS Inventario, el endpoint asincrono siguio aceptando la peticion porque el Gateway no espera al consumidor.
+## Defensa
 
-## Metodologia
-
-- **Kanban:** ver `TABLERO_KANBAN.md`.
-- **Ramificacion:** GitHub Flow con `main`, ramas `feat/...`, `fix/...`, `docs/...`, `refactor/...`.
-- **Commits semanticos:** Conventional Commits.
-
-Captura del tablero del Avance 1:
-
-![Tablero Kanban Avance 1](docs/avance1-kanban.png)
-
-Ejemplos:
-
-```bash
-feat(tcp): agregar camino sincrono para benchmark
-feat(redis): publicar evento asincrono de pedido
-docs(readme): documentar avance 1
-chore(compose): agregar redis al entorno de desarrollo
-```
+_Pendiente (Avance 3)._
 
 ## Tags de entrega
 
-- `v1-avance1` - pendiente
-- `v2-avance2` - pendiente
-- `v3-final` - pendiente
+- `v1-avance1` — 2026-07-14
+- `v2-avance2` — pendiente
+- `v3-final` — pendiente
