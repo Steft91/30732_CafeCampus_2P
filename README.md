@@ -21,7 +21,7 @@ inventario de la cafetería. El dominio se mantiene **deliberadamente simple** p
 esfuerzo en la **arquitectura de comunicación**, las buenas prácticas y la evidencia medible, no
 en la lógica de negocio.
 
-- **MS Productos:** catálogo, categorías, precios y disponibilidad (solo HTTP).
+- **MS Productos:** catálogo, categorías, precios y disponibilidad (HTTP + gRPC).
 - **MS Pedidos:** registra pedidos, calcula totales y coordina validación/descuento de stock.
 - **MS Inventario:** controla existencias y movimientos; expone los handlers de benchmark.
 - **API Gateway:** punto único de entrada HTTP, autenticación JWT y proxy hacia los servicios.
@@ -30,12 +30,13 @@ en la lógica de negocio.
 
 - **Framework:** NestJS + TypeScript · **Estructura:** monorepo (4 apps independientes).
 - **Síncrono (Avance 1):** TCP con `@nestjs/microservices` · **Eventos (Avance 1):** Redis PUB/SUB.
+- **Avance 2:** gRPC para consulta de productos y RabbitMQ como segundo transporte asíncrono.
 - **Persistencia:** PostgreSQL (un `schema` por servicio) · **ORM:** Prisma.
 - **Seguridad base:** JWT + Guards por rol en el Gateway · **Contenedores:** Docker Compose.
 
 > **Equivalencia con lo visto en clase:** la guía sugiere **TypeORM**; este proyecto usa **Prisma**,
-> que cumple el mismo rol de ORM sobre PostgreSQL. El camino síncrono usa **TCP** y el asíncrono
-> **Redis pub/sub**, tal como sugiere el material. En Avance 2 se añadirán gRPC y un segundo transporte.
+> que cumple el mismo rol de ORM sobre PostgreSQL. El camino síncrono usa **TCP**, el primer camino
+> asíncrono usa **Redis pub/sub** y el Avance 2 incorpora **gRPC** y **RabbitMQ** como segundo transporte.
 
 ## Cómo ejecutar
 
@@ -47,6 +48,17 @@ docker compose ps
 
 curl http://localhost:3000/api/benchmark/sync
 curl http://localhost:3000/api/benchmark/async
+```
+
+Si se levanta una base nueva en Docker, aplicar migraciones y seeds:
+
+```bash
+docker compose exec ms-productos npx prisma migrate deploy --schema src/prisma/schema.prisma
+docker compose exec ms-pedidos npx prisma migrate deploy --schema src/prisma/schema.prisma
+docker compose exec ms-inventario npx prisma migrate deploy --schema src/prisma/schema.prisma
+
+docker compose exec ms-productos npm run seed
+docker compose exec -e MS_PRODUCTOS_URL=http://ms-productos:3001 ms-inventario npm run seed
 ```
 
 ### Opción B — Local (sin Docker)
@@ -68,12 +80,15 @@ cd gateway && npm run start:dev
 
 ### Puertos
 
-| Servicio      | HTTP                  | TCP (microservicio)       |
-| ------------- | --------------------- | ------------------------- |
-| gateway       | 3000 (prefijo `/api`) | —                         |
-| ms-productos  | 3001                  | —                         |
-| ms-pedidos    | 3002                  | 4002                      |
-| ms-inventario | 3003                  | 4003 (+ suscriptor Redis) |
+| Servicio      | HTTP                  | Transporte interno |
+| ------------- | --------------------- | ------------------ |
+| gateway       | 3000 (prefijo `/api`) | TCP cliente, Redis publisher |
+| ms-productos  | 3001                  | gRPC 50051 |
+| ms-pedidos    | 3002                  | TCP 4002, gRPC cliente, RabbitMQ publisher |
+| ms-inventario | 3003                  | TCP 4003, Redis subscriber, RabbitMQ consumer |
+| PostgreSQL    | 5432                  | Base `cafe_campus` con schemas separados |
+| Redis         | 6379                  | Pub/Sub |
+| RabbitMQ      | 5672 / panel 15672    | Cola `cafe_campus_pedidos` |
 
 ## Arquitectura
 
@@ -146,7 +161,7 @@ sequenceDiagram
 
 - **Kanban:** ver [`TABLERO_KANBAN.md`](TABLERO_KANBAN.md) y el reparto en
   [`docs/planificacion-avance1/01-roles-y-kanban.md`](docs/planificacion-avance1/01-roles-y-kanban.md)
-  (captura en `docs/avance1-kanban.png`).
+  (captura en `docs/avance1-evidencias/avance1-kanban.png`).
 - **Ramificación:** **GitHub Flow** — `main` como rama principal y ramas `feat/…`, `chore/…` y `docs/…` para separar funcionalidades, configuración y documentación. Las ramas se integran mediante Pull Requests y se utiliza un **tag por avance**.
 - **Commits semánticos:** Conventional Commits `tipo(alcance): descripción`. Ejemplos:
     ```
@@ -185,8 +200,8 @@ Resumen (detalle y justificación en
 ### Latencia (200 peticiones, `benchmark.js`)
 
 ```bash
-node benchmark.js http://localhost:3000/api/benchmark/sync 200 > docs/avance1-benchmark-sync.txt
-node benchmark.js http://localhost:3000/api/benchmark/async 200 > docs/avance1-benchmark-async.txt
+node benchmark.js http://localhost:3000/api/benchmark/sync 200 > docs/avance1-evidencias/avance1-benchmark-sync.txt
+node benchmark.js http://localhost:3000/api/benchmark/async 200 > docs/avance1-evidencias/avance1-benchmark-async.txt
 ```
 
 | Camino          | Promedio (ms) | p95 (ms) | Máx (ms) | Errores |
@@ -197,18 +212,18 @@ node benchmark.js http://localhost:3000/api/benchmark/async 200 > docs/avance1-b
 ### Acoplamiento temporal (prueba de caída)
 
 Con el stack arriba, se apaga **MS Inventario** (Ctrl+C) y se repiten las peticiones
-(evidencia en `docs/avance1-caida-servicio.txt`):
+(evidencia en `docs/avance1-evidencias/avance1-caida-servicio.txt`):
 
 - **Síncrono → falla** con `503 Service Unavailable`: la cadena Gateway→Pedidos→Inventario requiere que todos estén vivos a la vez.
 - **Asíncrono → se acepta igual** (`"aceptado": true`, ~1 ms): el Gateway publica el evento en Redis y responde sin esperar una confirmación del consumidor. Esto demuestra un menor acoplamiento temporal desde la perspectiva del emisor.
 
 **Resultados del benchmark del camino síncrono**
 
-![Resultados del camino síncrono](docs/sync.png)
+![Resultados del camino síncrono](docs/avance1-evidencias/sync.png)
 
 **Resultados del benchmark del camino asíncrono**
 
-![Resultados del camino asíncrono](docs/async.png)
+![Resultados del camino asíncrono](docs/avance1-evidencias/async.png)
 
 ### Análisis
 
@@ -225,8 +240,57 @@ Análisis ampliado en
 
 ## Avance 2 — Comunicación: gRPC + 2.º transporte + excepciones · `tag v2-avance2`
 
-_Pendiente._ Contrato `.proto` (gRPC) entre dos microservicios, segundo transporte
-(RabbitMQ/MQTT/NATS), tabla comparativa de transportes y manejo de excepciones con evidencia.
+### Implementación
+
+- **gRPC:** `ms-pedidos -> ms-productos`, usando el contrato
+  [`proto/productos.proto`](proto/productos.proto).
+- **RabbitMQ:** `ms-pedidos -> ms-inventario`, publicando el evento
+  `pedido.creado.rabbitmq` en la cola `cafe_campus_pedidos`.
+- **Error controlado:** si `ms-productos` responde `NOT_FOUND` por gRPC, `ms-pedidos` captura el
+  error y responde al cliente con `422` sin tumbar el servicio.
+
+```mermaid
+flowchart LR
+    cliente([Cliente / Postman])
+    gw[API Gateway<br/>HTTP :3000]
+    pedidos[MS Pedidos<br/>HTTP :3002]
+    productos[MS Productos<br/>gRPC :50051]
+    rabbit[[RabbitMQ<br/>cafe_campus_pedidos]]
+    inventario[MS Inventario<br/>RabbitMQ consumer]
+
+    cliente --> gw
+    gw --> pedidos
+    pedidos == GetProductoById gRPC ==> productos
+    pedidos == pedido.creado.rabbitmq ==> rabbit
+    rabbit == evento ==> inventario
+```
+
+### Flujo validado
+
+Para crear un pedido, el cliente envía solamente `productoId` y `cantidad`. `ms-pedidos` consulta
+el producto por gRPC, toma el `nombre` y `precio` reales desde `ms-productos`, calcula el total,
+persiste el pedido y publica un evento en RabbitMQ para `ms-inventario`.
+
+Evidencias:
+
+- Pedido exitoso: [`docs/avance2-evidencias/flujo-pedido-grpc-rabbitmq.txt`](docs/avance2-evidencias/flujo-pedido-grpc-rabbitmq.txt)
+- Consumidor RabbitMQ: [`docs/avance2-evidencias/rabbitmq-inventario.txt`](docs/avance2-evidencias/rabbitmq-inventario.txt)
+- Captura RabbitMQ: [`docs/avance2-evidencias/avance2-rabbitmq-inventario-log.png`](docs/avance2-evidencias/avance2-rabbitmq-inventario-log.png)
+- Error gRPC controlado: [`docs/avance2-evidencias/error-producto-inexistente-grpc.txt`](docs/avance2-evidencias/error-producto-inexistente-grpc.txt)
+- Captura del error: [`docs/avance2-evidencias/avance2-error-producto-inexistente-grpc.png`](docs/avance2-evidencias/avance2-error-producto-inexistente-grpc.png)
+
+### Comparativa de transportes
+
+| Transporte | Uso en el proyecto | Tipo | Ventaja principal | Limitación |
+|---|---|---|---|---|
+| HTTP | Gateway hacia servicios | Síncrono request/response | Simple de probar y exponer | Mayor acoplamiento entre cliente y servicio |
+| TCP NestJS | Benchmark Avance 1 | Síncrono interno | Ligero para comunicación entre microservicios NestJS | El emisor espera toda la cadena |
+| Redis Pub/Sub | Benchmark asíncrono Avance 1 | Asíncrono no persistente | Muy baja latencia para publicar | Si el consumidor está caído, el evento puede perderse |
+| gRPC | Pedidos consulta Productos | Síncrono tipado | Contrato `.proto`, eficiente y explícito | Requiere mantener contrato y cliente/servidor compatibles |
+| RabbitMQ | Pedidos notifica Inventario | Asíncrono con cola | Desacopla emisor/consumidor y permite cola durable | Más infraestructura y configuración |
+
+Planificación técnica:
+[`docs/planificacion-avance2/`](docs/planificacion-avance2/).
 
 ## Avance 3 — Seguridad, observabilidad e integración (FINAL) · `tag v3-final`
 
@@ -240,5 +304,5 @@ _Pendiente (Avance 3)._
 ## Tags de entrega
 
 - `v1-avance1` — 2026-07-14
-- `v2-avance2` — pendiente
+- `v2-avance2` — pendiente de creación tras merge final del Avance 2
 - `v3-final` — pendiente

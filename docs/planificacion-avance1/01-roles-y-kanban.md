@@ -41,7 +41,7 @@ Equipo de **3 integrantes**. El reparto utiliza **propiedad por directorio**: ca
 | — | — | — | — | Benchmark + evidencia |
 | — | — | — | — | README + diagrama + tag |
 
-> Al cerrar el corte se sube una captura del tablero a `docs/avance1-kanban.png`
+> Al cerrar el corte se sube una captura del tablero a `docs/avance1-evidencias/avance1-kanban.png`
 > y se enlaza en el README (lo hace Stefany en `docs/avance1`).
 
 ## Cómo se conecta con GitHub Flow
