@@ -38,6 +38,7 @@ services:
     command: sh -c "apk add --no-cache openssl && npm ci && npx prisma generate --schema src/prisma/schema.prisma && npm run start:dev"
     volumes:
       - ./ms-productos:/app
+      - ./proto:/proto:ro
     environment:
       PORT: 3001
       GRPC_PORT: 50051
@@ -79,6 +80,7 @@ services:
     command: sh -c "apk add --no-cache openssl && npm ci && npx prisma generate --schema src/prisma/schema.prisma && npm run start:dev"
     volumes:
       - ./ms-pedidos:/app
+      - ./proto:/proto:ro
     environment:
       PORT: 3002
       TCP_PORT: 4002
