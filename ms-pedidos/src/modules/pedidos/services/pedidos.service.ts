@@ -4,20 +4,60 @@ import {
   BadRequestException,
   HttpException,
   HttpStatus,
+  OnModuleInit,
 } from '@nestjs/common';
+import { join } from 'path';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CrearPedidoDto, ActualizarEstadoDto } from '../dto/pedido.dto';
 import axios, { AxiosError } from 'axios';
+import { ClientGrpc, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { firstValueFrom, Observable, timeout } from 'rxjs';
 
 const MS_INVENTARIO_URL = process.env.MS_INVENTARIO_URL ?? 'http://localhost:3003';
+
+type ProductoGrpcResponse = {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  precio: number;
+  categoriaId: string;
+  categoriaNombre: string;
+  disponible: boolean;
+};
+
+type ProductosGrpcService = {
+  obtenerProducto(data: { id: string }): Observable<ProductoGrpcResponse>;
+};
+
+type ItemPedidoConSnapshot = {
+  productoId: string;
+  nombre: string;
+  precio: number;
+  cantidad: number;
+};
 
 /**
  * SRP: lógica de pedidos únicamente.
  * Coordina con MS Inventario para validar y descontar stock.
  */
 @Injectable()
-export class PedidosService {
+export class PedidosService implements OnModuleInit {
+  private productosGrpc: ProductosGrpcService;
+
   constructor(private readonly prisma: PrismaService) {}
+
+  onModuleInit() {
+    const grpcClient = ClientProxyFactory.create({
+      transport: Transport.GRPC,
+      options: {
+        package: 'productos',
+        protoPath: join(__dirname, '../../../../../proto/productos.proto'),
+        url: process.env.GRPC_PRODUCTOS_URL ?? 'localhost:50051',
+      },
+    }) as unknown as ClientGrpc;
+
+    this.productosGrpc = grpcClient.getService<ProductosGrpcService>('ProductosGrpcService');
+  }
 
   async findAll() {
     return this.prisma.pedido.findMany({
@@ -48,22 +88,25 @@ export class PedidosService {
   }
 
   async create(dto: CrearPedidoDto, usuarioId: string) {
-    // 1. Validar stock con MS Inventario antes de confirmar
-    await this.validarStock(dto.items);
+    // 1. Obtener snapshots reales desde MS Productos por gRPC
+    const items = await this.obtenerSnapshotsProductos(dto.items);
 
-    // 2. Calcular total
-    const total = dto.items.reduce(
+    // 2. Validar stock con MS Inventario antes de confirmar
+    await this.validarStock(items);
+
+    // 3. Calcular total con precios del MS Productos, no con datos del cliente
+    const total = items.reduce(
       (sum, item) => sum + item.precio * item.cantidad,
       0,
     );
 
-    // 3. Crear pedido en transacción
+    // 4. Crear pedido en transacción
     const pedido = await this.prisma.pedido.create({
       data: {
         usuarioId,
         total,
         items: {
-          create: dto.items.map((item) => ({
+          create: items.map((item) => ({
             productoId: item.productoId,
             nombre: item.nombre,
             precio: item.precio,
@@ -74,8 +117,8 @@ export class PedidosService {
       include: { items: true },
     });
 
-    // 4. Descontar stock en MS Inventario (fire and forget con manejo de error)
-    await this.descontarStock(pedido.id, dto.items).catch((err) => {
+    // 5. Descontar stock en MS Inventario (fire and forget con manejo de error)
+    await this.descontarStock(pedido.id, items).catch((err) => {
       console.error('Error al descontar stock:', err);
       // El pedido ya fue creado; se podría implementar compensación aquí
     });
@@ -112,7 +155,42 @@ export class PedidosService {
 
   // --- Comunicación interna con MS Inventario ---
 
-  private async validarStock(items: CrearPedidoDto['items']) {
+  private async obtenerSnapshotsProductos(
+    items: CrearPedidoDto['items'],
+  ): Promise<ItemPedidoConSnapshot[]> {
+    try {
+      return await Promise.all(
+        items.map(async (item) => {
+          const producto = await firstValueFrom(
+            this.productosGrpc.obtenerProducto({ id: item.productoId }).pipe(timeout(3000)),
+          );
+
+          if (!producto.disponible) {
+            throw new Error(`Producto ${producto.nombre} no está disponible`);
+          }
+
+          return {
+            productoId: producto.id,
+            nombre: producto.nombre,
+            precio: producto.precio,
+            cantidad: item.cantidad,
+          };
+        }),
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo obtener información del producto por gRPC';
+
+      throw new HttpException(
+        `Error gRPC al consultar producto: ${message}`,
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+  }
+
+  private async validarStock(items: Array<{ productoId: string; cantidad: number }>) {
     try {
       await axios.post(`${MS_INVENTARIO_URL}/inventario/validar`, {
         items: items.map(({ productoId, cantidad }) => ({ productoId, cantidad })),
@@ -125,7 +203,10 @@ export class PedidosService {
     }
   }
 
-  private async descontarStock(pedidoId: string, items: CrearPedidoDto['items']) {
+  private async descontarStock(
+    pedidoId: string,
+    items: Array<{ productoId: string; cantidad: number }>,
+  ) {
     await axios.post(`${MS_INVENTARIO_URL}/inventario/descontar`, {
       pedidoId,
       items: items.map(({ productoId, cantidad }) => ({ productoId, cantidad })),
