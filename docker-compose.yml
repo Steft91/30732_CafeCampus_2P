@@ -60,6 +60,7 @@ services:
       PORT: 3003
       TCP_PORT: 4003
       DATABASE_URL: postgresql://postgres:password@postgres:5432/cafe_campus?schema=inventario_schema
+      MS_PRODUCTOS_URL: http://ms-productos:3001
       REDIS_HOST: redis
       REDIS_PORT: 6379
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
