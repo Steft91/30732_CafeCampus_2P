@@ -24,6 +24,14 @@ services:
     ports:
       - "6379:6379"
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: cafe-campus-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
   ms-productos:
     image: node:20-alpine
     working_dir: /app
@@ -32,9 +40,11 @@ services:
       - ./ms-productos:/app
     environment:
       PORT: 3001
+      GRPC_PORT: 50051
       DATABASE_URL: postgresql://postgres:password@postgres:5432/cafe_campus?schema=productos_schema
     ports:
       - "3001:3001"
+      - "50051:50051"
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,6 +61,7 @@ services:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/cafe_campus?schema=inventario_schema
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     ports:
       - "3003:3003"
       - "4003:4003"
@@ -58,6 +69,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_started
+      rabbitmq:
         condition: service_started
 
   ms-pedidos:
@@ -73,6 +86,8 @@ services:
       MS_INVENTARIO_URL: http://ms-inventario:3003
       MS_INVENTARIO_TCP_HOST: ms-inventario
       MS_INVENTARIO_TCP_PORT: 4003
+      GRPC_PRODUCTOS_URL: ms-productos:50051
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     ports:
       - "3002:3002"
       - "4002:4002"
@@ -80,6 +95,10 @@ services:
       postgres:
         condition: service_healthy
       ms-inventario:
+        condition: service_started
+      ms-productos:
+        condition: service_started
+      rabbitmq:
         condition: service_started
 
   gateway:
