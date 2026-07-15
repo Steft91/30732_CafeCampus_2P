@@ -10,7 +10,7 @@ import { join } from 'path';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CrearPedidoDto, ActualizarEstadoDto } from '../dto/pedido.dto';
 import axios, { AxiosError } from 'axios';
-import { ClientGrpc, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { ClientGrpc, ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
 import { firstValueFrom, Observable, timeout } from 'rxjs';
 
 const MS_INVENTARIO_URL = process.env.MS_INVENTARIO_URL ?? 'http://localhost:3003';
@@ -43,6 +43,7 @@ type ItemPedidoConSnapshot = {
 @Injectable()
 export class PedidosService implements OnModuleInit {
   private productosGrpc: ProductosGrpcService;
+  private rabbitClient: ClientProxy;
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -57,6 +58,17 @@ export class PedidosService implements OnModuleInit {
     }) as unknown as ClientGrpc;
 
     this.productosGrpc = grpcClient.getService<ProductosGrpcService>('ProductosGrpcService');
+
+    this.rabbitClient = ClientProxyFactory.create({
+      transport: Transport.RMQ,
+      options: {
+        urls: [process.env.RABBITMQ_URL ?? 'amqp://guest:guest@localhost:5672'],
+        queue: process.env.RABBITMQ_PEDIDOS_QUEUE ?? 'cafe_campus_pedidos',
+        queueOptions: {
+          durable: true,
+        },
+      },
+    });
   }
 
   async findAll() {
@@ -117,7 +129,12 @@ export class PedidosService implements OnModuleInit {
       include: { items: true },
     });
 
-    // 5. Descontar stock en MS Inventario (fire and forget con manejo de error)
+    // 5. Publicar evento RabbitMQ para evidenciar segundo transporte asíncrono
+    await this.publicarPedidoCreadoRabbitMQ(pedido.id, usuarioId, total, items).catch((err) => {
+      console.error('Error al publicar evento RabbitMQ:', err);
+    });
+
+    // 6. Descontar stock en MS Inventario (fire and forget con manejo de error)
     await this.descontarStock(pedido.id, items).catch((err) => {
       console.error('Error al descontar stock:', err);
       // El pedido ya fue creado; se podría implementar compensación aquí
@@ -154,6 +171,25 @@ export class PedidosService implements OnModuleInit {
   }
 
   // --- Comunicación interna con MS Inventario ---
+
+  private async publicarPedidoCreadoRabbitMQ(
+    pedidoId: string,
+    usuarioId: string,
+    total: number,
+    items: ItemPedidoConSnapshot[],
+  ) {
+    await firstValueFrom(
+      this.rabbitClient
+        .emit('pedido.creado.rabbitmq', {
+          pedidoId,
+          usuarioId,
+          total,
+          items,
+          creadoEn: new Date().toISOString(),
+        })
+        .pipe(timeout(1500)),
+    );
+  }
 
   private async obtenerSnapshotsProductos(
     items: CrearPedidoDto['items'],
