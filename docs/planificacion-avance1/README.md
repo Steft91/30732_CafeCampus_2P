@@ -1,16 +1,16 @@
 # Planificación — Avance 1 (Cafe Campus)
 
-Documentos de organización para reconstruir el proyecto en un **repositorio nuevo y limpio**
-con historia GitHub Flow coherente. Equipo de 3: **Marcos Escobar**, **Mateo Sosa**, **Stefany Díaz**.
+Documentación técnica y organizativa correspondiente al primer avance de Cafe Campus.
+Se presentan la distribución de responsabilidades, arquitectura implementada, patrones de diseño aplicados y el análisis experimental de latencia y acoplamiento temporal.
 
+Equipo de 3 integrantes: **Marcos Escobar**, **Mateo Sosa** y **Stefany Díaz**. 
 | Documento | Contenido |
 |---|---|
 | [`arquitectura-avance1.puml`](arquitectura-avance1.puml) | **Fuente** del diagrama de arquitectura (PlantUML): camino síncrono TCP vs asíncrono Redis. |
 | [`arquitectura-avance1.png`](arquitectura-avance1.png) · [`.svg`](arquitectura-avance1.svg) | Diagrama **exportado** (el PNG es el que se enlaza en el README). |
 | [`01-roles-y-kanban.md`](01-roles-y-kanban.md) | Roles, propiedad por directorio y reparto de tarjetas Kanban. |
-| [`02-plan-de-commits.md`](02-plan-de-commits.md) | Plan de commits `git add` por rama, orden de merge, sin choques. |
-| [`03-patrones-y-principios.md`](03-patrones-y-principios.md) | Patrones/principios aplicados (framework vs equipo) — criterio C3. |
-| [`04-analisis-latencia-acoplamiento.md`](04-analisis-latencia-acoplamiento.md) | Análisis empírico de latencia y acoplamiento — criterio C2. |
+| [`02-patrones-y-principios.md`](02-patrones-y-principios.md) | Patrones/principios aplicados (framework vs equipo) — criterio C3. |
+| [`03-analisis-latencia-acoplamiento.md`](03-analisis-latencia-acoplamiento.md) | Análisis empírico de latencia y acoplamiento — criterio C2. |
 
 ## Cómo regenerar el diagrama
 

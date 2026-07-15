@@ -1,8 +1,6 @@
 # Roles, actividades y Kanban — Avance 1
 
-Equipo de **3 integrantes**. El reparto usa **propiedad por directorio**: cada persona
-es dueña de directorios disjuntos, de modo que dos ramas abiertas en paralelo nunca
-tocan el mismo archivo (ver [`02-plan-de-commits.md`](02-plan-de-commits.md)).
+Equipo de **3 integrantes**. El reparto utiliza **propiedad por directorio**: cada integrante trabaja principalmente sobre directorios disjuntos, reduciendo la probabilidad de conflictos durante la integración de las ramas.
 
 ## Integrantes y responsabilidades
 
@@ -49,7 +47,5 @@ tocan el mismo archivo (ver [`02-plan-de-commits.md`](02-plan-de-commits.md)).
 ## Cómo se conecta con GitHub Flow
 
 - `main` protegida; cada tarjeta se trabaja en su rama `feat/…`, `chore/…`, `docs/…`.
-- Cada rama se integra por **Pull Request revisado por otro integrante** (revisor sugerido:
-  el PR de un servicio lo revisa quien no lo escribió — p. ej. Stefany revisa `feat/gateway`,
-  Marcos revisa `feat/ms-inventario`, Mateo revisa `feat/ms-productos`).
+- Cada rama se integra a `main` mediante **Pull Request**, manteniendo separado el trabajo realizado en `feat/…`, `chore/…` y `docs/…`.
 - Un **tag por avance**: `v1-avance1` tras fusionar todo.

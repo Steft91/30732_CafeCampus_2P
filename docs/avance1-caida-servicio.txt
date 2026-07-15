@@ -1,44 +1,36 @@
-Prueba de acoplamiento temporal - Avance 1
+"PRUEBA DE CAIDA DE SERVICIO - ACOPLAMIENTO TEMPORAL
+===================================================
 
-Contexto:
-- Gateway activo.
-- MS Pedidos activo.
-- Redis activo.
-- MS Inventario apagado manualmente con Ctrl + C.
+Escenario: MS Inventario detenido
 
-Camino sincrono TCP:
+1. CAMINO SINCRONO
+Gateway -> MS Pedidos -> MS Inventario
 
-curl http://localhost:3000/api/benchmark/sync
+HTTP/1.1 503 Service Unavailable
+X-Powered-By: Express
+Access-Control-Allow-Origin: http://localhost:4200
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 133
+ETag: W/"85-btu9IzrU0U5egasLTuD+v2ABssQ"
+Date: Wed, 15 Jul 2026 02:17:11 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
 
-Respuesta:
+{"message":"Camino síncrono no disponible: MS Pedidos o MS Inventario no respondió","error":"Service Unavailable","statusCode":503}
 
-{
-  "message": "Camino síncrono no disponible: MS Pedidos o MS Inventario no respondió",
-  "error": "Service Unavailable",
-  "statusCode": 503
-}
+2. CAMINO ASINCRONO
+Gateway -> Redis
 
-Interpretacion:
-La peticion falla porque el camino sincrono Gateway -> MS Pedidos -> MS Inventario requiere que todos los servicios esten vivos al mismo tiempo.
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Access-Control-Allow-Origin: http://localhost:4200
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 266
+ETag: W/"10a-ZvsBC2wZr+2xXVL45RGzC+S2v5A"
+Date: Wed, 15 Jul 2026 02:17:11 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
 
-Camino asincrono Redis:
-
-curl http://localhost:3000/api/benchmark/async
-
-Respuesta:
-
-{
-  "camino": "asincrono-redis",
-  "descripcion": "Gateway publica evento Redis; el consumidor procesa sin bloquear",
-  "aceptado": true,
-  "duracionMs": 1,
-  "evento": {
-    "pedidoId": "bench-1783991214636",
-    "productoId": "demo-cappuccino",
-    "cantidad": 2,
-    "creadoEn": "2026-07-14T01:06:54.636Z"
-  }
-}
-
-Interpretacion:
-El Gateway acepta la peticion porque solo necesita publicar en Redis. El consumidor no bloquea la respuesta del emisor.
+{"camino":"asincrono-redis","descripcion":"Gateway publica evento Redis; el consumidor procesa sin bloquear","aceptado":true,"duracionMs":1,"evento":{"pedidoId":"bench-1784081831984","productoId":"demo-cappuccino","cantidad":2,"creadoEn":"2026-07-15T02:17:11.984Z"}}
