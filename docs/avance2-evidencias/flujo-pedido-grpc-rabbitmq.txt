@@ -1,0 +1,18 @@
+{
+  "id": "1e2e0949-b208-48ed-9f2e-b757faefeb15",
+  "usuarioId": "3",
+  "estado": "PENDIENTE",
+  "total": "5",
+  "creadoEn": "2026-07-15T13:26:41.417Z",
+  "actualizadoEn": "2026-07-15T13:26:41.417Z",
+  "items": [
+    {
+      "id": "7503c03e-dd6a-4223-ae07-c7d2a9131352",
+      "pedidoId": "1e2e0949-b208-48ed-9f2e-b757faefeb15",
+      "productoId": "4083d95a-7576-4ad6-98fd-b124362aa21d",
+      "nombre": "Cappuccino",
+      "precio": "2.5",
+      "cantidad": 2
+    }
+  ]
+}
