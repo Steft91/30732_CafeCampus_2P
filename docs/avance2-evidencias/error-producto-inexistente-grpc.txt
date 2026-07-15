@@ -1,0 +1,4 @@
+{
+  "statusCode": 422,
+  "message": "Error gRPC al consultar producto: 5 NOT_FOUND: Producto con id producto-inexistente no encontrado"
+}
