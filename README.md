@@ -174,15 +174,19 @@ sequenceDiagram
 ## Patrones y principios aplicados
 
 Resumen (detalle y justificación en
-[`docs/planificacion-avance1/02-patrones-y-principios.md`](docs/planificacion-avance1/02-patrones-y-principios.md)):
+[`docs/planificacion-avance1/02-patrones-y-principios.md`](docs/planificacion-avance1/02-patrones-y-principios.md)
+y [`docs/planificacion-avance2/02-patrones-y-principios.md`](docs/planificacion-avance2/02-patrones-y-principios.md)):
 
-| Patrón / Principio | ¿Framework o equipo? |
-|---|---|
-| API Gateway y Proxy | Diseñados por el equipo |
-| Publisher/Subscriber (Redis) y Request/Response (TCP) | Equipo, utilizando transportes de NestJS |
-| DTO, `ValidationPipe`, inyección de dependencias y módulos | Proporcionados por NestJS y utilizados deliberadamente |
-| Excepciones HTTP y manejo controlado de errores | Framework y uso deliberado del equipo |
-| SRP, separación de responsabilidades y aislamiento de datos por `schema` | Diseño del equipo |
+| Patrón / Principio | ¿Framework o equipo? | Avance |
+|---|---|---|
+| API Gateway y Proxy | Diseñados por el equipo | 1 |
+| Publisher/Subscriber (Redis) y Request/Response (TCP) | Equipo, utilizando transportes de NestJS | 1 |
+| DTO, `ValidationPipe`, inyección de dependencias y módulos | Proporcionados por NestJS y utilizados deliberadamente | 1 |
+| Excepciones HTTP y manejo controlado de errores | Framework y uso deliberado del equipo | 1–2 |
+| SRP, separación de responsabilidades y aislamiento de datos por `schema` | Diseño del equipo | 1 |
+| RPC con contrato (gRPC) y contrato `.proto` compartido | Equipo, sobre `Transport.GRPC` de NestJS | 2 |
+| Pub/Sub sobre cola durable (RabbitMQ) | Equipo, sobre `Transport.RMQ` de NestJS | 2 |
+| Snapshot de producto y traducción de errores gRPC→HTTP 422 | Diseño del equipo | 2 |
 ---
 
 ## Avance 1 — Acoplamiento temporal y latencia · `tag v1-avance1`
@@ -249,6 +253,15 @@ Análisis ampliado en
 - **Error controlado:** si `ms-productos` responde `NOT_FOUND` por gRPC, `ms-pedidos` captura el
   error y responde al cliente con `422` sin tumbar el servicio.
 
+![Arquitectura Avance 2](docs/planificacion-avance2/arquitectura-avance2.png)
+
+> Diagrama generado con **PlantUML**. Fuente:
+> [`arquitectura-avance2.puml`](docs/planificacion-avance2/arquitectura-avance2.puml) ·
+> versión vectorial: [`arquitectura-avance2.svg`](docs/planificacion-avance2/arquitectura-avance2.svg).
+> Regenerar con: `plantuml -tpng docs/planificacion-avance2/arquitectura-avance2.puml`
+
+Vista simplificada de los transportes nuevos:
+
 ```mermaid
 flowchart LR
     cliente([Cliente / Postman])
@@ -260,7 +273,7 @@ flowchart LR
 
     cliente --> gw
     gw --> pedidos
-    pedidos == GetProductoById gRPC ==> productos
+    pedidos == ObtenerProducto gRPC ==> productos
     pedidos == pedido.creado.rabbitmq ==> rabbit
     rabbit == evento ==> inventario
 ```
@@ -289,8 +302,11 @@ Evidencias:
 | gRPC | Pedidos consulta Productos | Síncrono tipado | Contrato `.proto`, eficiente y explícito | Requiere mantener contrato y cliente/servidor compatibles |
 | RabbitMQ | Pedidos notifica Inventario | Asíncrono con cola | Desacopla emisor/consumidor y permite cola durable | Más infraestructura y configuración |
 
-Planificación técnica:
-[`docs/planificacion-avance2/`](docs/planificacion-avance2/).
+Planificación técnica del avance:
+[roles y Kanban](docs/planificacion-avance2/01-roles-y-kanban.md) ·
+[patrones y principios](docs/planificacion-avance2/02-patrones-y-principios.md) ·
+[comparación de transportes y excepciones](docs/planificacion-avance2/03-comparacion-transportes-excepciones.md) ·
+[plan de commits](docs/planificacion-avance2/04-plan-de-commits.md).
 
 ## Avance 3 — Seguridad, observabilidad e integración (FINAL) · `tag v3-final`
 

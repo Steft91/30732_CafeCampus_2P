@@ -1,39 +1,55 @@
 # Planificación — Avance 2 (Cafe Campus)
 
-Documentación técnica y organizativa para implementar **gRPC + segundo transporte + manejo de excepciones** sin romper lo entregado en Avance 1.
+Documentación técnica y organizativa correspondiente al segundo avance de Cafe Campus.
+Se presentan la distribución de responsabilidades, la arquitectura de comunicación ampliada
+(**gRPC** + **RabbitMQ**), los patrones de diseño aplicados y el manejo de excepciones,
+junto con la comparación de los cuatro transportes utilizados en el proyecto.
 
-## Objetivo
+Equipo de 3 integrantes: **Marcos Escobar**, **Mateo Sosa** y **Stefany Díaz**.
 
-Agregar dos formas nuevas de comunicación entre microservicios:
+## Objetivo del avance
 
-1. **gRPC** entre `ms-pedidos` y `ms-productos`, usando un contrato `.proto`.
-2. **RabbitMQ** como segundo transporte asíncrono, distinto a Redis Pub/Sub.
+Enriquecer la comunicación del MVP con **dos temas del curso** sin romper lo entregado en Avance 1:
 
-El camino TCP y Redis del Avance 1 se conservan como evidencia previa.
+1. **gRPC** entre `ms-pedidos` (cliente) y `ms-productos` (servidor), con contrato `.proto` en el monorepo.
+2. **RabbitMQ** como **segundo transporte asíncrono** (cola durable), distinto a Redis Pub/Sub.
+3. **Manejo de excepciones** consistente en la capa de servicios para los nuevos caminos (error gRPC controlado que no tumba el servicio).
 
-## Decisión técnica
-
-| Requisito | Implementación propuesta | Motivo |
-|---|---|---|
-| gRPC | `ms-pedidos -> ms-productos` | Pedidos necesita consultar datos reales del producto antes de crear un pedido. |
-| Segundo transporte | RabbitMQ | Aporta cola y entrega más robusta que Redis Pub/Sub para eventos asíncronos. |
-| Error controlado | Producto inexistente por gRPC | Permite demostrar `try/catch` sin tumbar el servicio. |
-| Evidencia | `curl`, logs, capturas y README | La rúbrica exige pruebas visibles en el repositorio. |
-
-## Documentos
+El camino síncrono **TCP** y el asíncrono **Redis** del Avance 1 **se conservan** como evidencia previa.
 
 | Documento | Contenido |
 |---|---|
-| [`01-alcance-arquitectura.md`](01-alcance-arquitectura.md) | Alcance técnico, flujos gRPC/RabbitMQ y diagrama Mermaid. |
-| [`02-plan-commits.md`](02-plan-commits.md) | Ramas y commits semánticos sugeridos para el equipo. |
-| [`03-evidencias-checklist.md`](03-evidencias-checklist.md) | Evidencias obligatorias para cerrar `v2-avance2`. |
+| [`arquitectura-avance2.puml`](arquitectura-avance2.puml) | **Fuente** del diagrama de arquitectura (PlantUML): gRPC + RabbitMQ sobre TCP/Redis. |
+| [`arquitectura-avance2.png`](arquitectura-avance2.png) · [`.svg`](arquitectura-avance2.svg) | Diagrama **exportado** (el PNG es el que se enlaza en el README). |
+| [`01-roles-y-kanban.md`](01-roles-y-kanban.md) | Roles, propiedad por directorio y reparto de tarjetas Kanban del Avance 2. |
+| [`02-patrones-y-principios.md`](02-patrones-y-principios.md) | Patrones/principios aplicados (framework vs equipo) — criterio C4. |
+| [`03-comparacion-transportes-excepciones.md`](03-comparacion-transportes-excepciones.md) | Comparación de los 4 transportes y estrategia de excepciones — criterios C2/C3. |
+| [`04-plan-de-commits.md`](04-plan-de-commits.md) | Plan de commits semánticos (GitHub Flow) para migrar el Avance 2 al repositorio limpio. |
 
-## Resultado esperado
+## Decisión técnica
 
-- Contrato `productos.proto` versionado en el monorepo.
-- `ms-productos` expone un servidor gRPC.
-- `ms-pedidos` consume gRPC para consultar productos.
-- `ms-pedidos` publica evento en RabbitMQ.
-- `ms-inventario` consume evento desde RabbitMQ.
-- README actualizado con diagrama, comparación de transportes y manejo de excepciones.
-- Tag `v2-avance2`.
+| Requisito | Implementación | Motivo |
+|---|---|---|
+| gRPC (Tema 7) | `ms-pedidos` → `ms-productos` | Pedidos necesita `nombre`/`precio` **reales del servidor** antes de crear un pedido, no del cliente. |
+| Segundo transporte | RabbitMQ (`amqp`) | Cola **durable**: entrega más robusta que Redis Pub/Sub (el evento sobrevive a la caída del consumidor). |
+| Error controlado | Producto inexistente por gRPC | `RpcException(NOT_FOUND)` → HTTP `422` con `try/catch`, sin tumbar el servicio. |
+| Evidencia | `curl`, logs y capturas en `docs/avance2-evidencias/` | La rúbrica exige pruebas visibles en el repositorio. |
+
+## Cómo regenerar el diagrama
+
+El PNG/SVG ya están exportados y versionados. Si se edita el `.puml`, **hay que regenerarlos**:
+
+```bash
+# Requiere: plantuml + java + graphviz (dot)
+plantuml -tpng docs/planificacion-avance2/arquitectura-avance2.puml
+plantuml -tsvg docs/planificacion-avance2/arquitectura-avance2.puml
+```
+
+Alternativas: extensión *PlantUML* en VS Code (`Alt+D` para previsualizar) o pegar el contenido
+en <https://www.plantuml.com/plantuml>.
+
+## Secuencia de trabajo en una frase
+
+Marcos fija el contrato `.proto` y la infraestructura (RabbitMQ + variables) → Stefany expone el
+servidor gRPC en Productos y Mateo consume gRPC + publica/consume RabbitMQ en Pedidos e Inventario
+(directorios disjuntos, cero conflictos) → Stefany documenta, mide y evidencia → Marcos etiqueta `v2-avance2`.
