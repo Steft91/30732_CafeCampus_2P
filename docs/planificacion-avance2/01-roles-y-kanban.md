@@ -9,15 +9,22 @@ la integración de las ramas. El único archivo compartido (`docker-compose.yml`
 
 | Integrante | Rol | Directorios/archivos propios | Ramas |
 |---|---|---|---|
-| **Marcos Escobar** | Arquitectura · Contrato gRPC · Infraestructura · Integración | `proto/productos.proto` · `docker-compose.yml` · `gateway/` · fixes de `tsconfig` | `chore/grpc-rabbitmq-infra` |
-| **Mateo Sosa** | Backend · Cliente gRPC · Transporte RabbitMQ | `ms-pedidos/` (cliente gRPC + publisher RMQ), `ms-inventario/` (consumer RMQ) | `feat/grpc-rabbitmq-pedidos`, `feat/rabbitmq-inventario` |
-| **Stefany Díaz** | Servidor gRPC · Documentación · QA · Evidencias | `ms-productos/` (servidor gRPC), `docs/`, `README.md` | `feat/grpc-productos`, `docs/avance2` |
+| **Marcos Escobar** | Arquitectura · **gRPC (contrato + servidor)** · Infraestructura · Integración | `proto/productos.proto` · `docker-compose.yml` · `gateway/tsconfig.json` · **`ms-productos/` (servidor gRPC)** | `chore/grpc-rabbitmq-infra`, `feat/grpc-productos` |
+| **Mateo Sosa** | Backend · Consumer RabbitMQ (Inventario) | `ms-inventario/` (consumer RMQ) | `feat/rabbitmq-inventario` |
+| **Stefany Díaz** | Cliente gRPC + Publisher RabbitMQ (Pedidos) · Documentación · QA · Evidencias | `ms-pedidos/` (cliente gRPC + publisher RMQ), `docs/`, `README.md`, `TABLERO_KANBAN.md` | `feat/grpc-rabbitmq-pedidos`, `docs/avance2` |
 
-> **Por qué este reparto no choca:** el servidor gRPC vive en `ms-productos/` (Stefany) y el cliente
-> gRPC vive en `ms-pedidos/` (Mateo); el publisher RabbitMQ vive en `ms-pedidos/` (Mateo) y el consumer
-> en `ms-inventario/` (Mateo). Las dependencias entre ellos son de **runtime**, no de compilación, y el
-> **contrato `.proto`** —única pieza que ambos lados comparten— lo congela Marcos antes de que arranquen
-> las ramas de servicio.
+> **Por qué este reparto no choca:** cada directorio de servicio lo toca **un solo integrante** en la
+> Fase 1 — `ms-productos/` (Marcos, servidor gRPC), `ms-pedidos/` (Stefany, cliente gRPC + publisher
+> RabbitMQ) y `ms-inventario/` (Mateo, consumer RabbitMQ). Las dependencias entre servicios
+> (cliente↔servidor gRPC, publisher↔consumer RabbitMQ) son de **runtime**, no de compilación, y el
+> **contrato `.proto`** lo congela Marcos en la Fase 0 antes de que arranquen las ramas de servicio,
+> por lo que las tres ramas se fusionan en cualquier orden sin conflictos.
+
+> **Nota sobre el reparto (equilibrio de aportes):** los **tres** integrantes tienen aportes de
+> **código** en la Fase 1: Marcos el servidor gRPC de `ms-productos` (coherente con ser dueño del
+> contrato `.proto`), Stefany todo el lado Pedidos —cliente gRPC + publisher RabbitMQ— además de la
+> documentación y evidencias (criterio C5), y Mateo el consumer RabbitMQ de `ms-inventario`. Cada rama
+> la revisa un compañero distinto para dejar trazabilidad de PR (criterio C4).
 
 ## Reparto de tarjetas del `TABLERO_KANBAN.md` (etiqueta `avance-2`)
 
@@ -26,11 +33,11 @@ la integración de las ramas. El único archivo compartido (`docker-compose.yml`
 | Definir contrato `productos.proto` (mensajes + servicio) | Marcos | `chore/grpc-rabbitmq-infra` |
 | Agregar RabbitMQ y variables gRPC/RMQ a Docker Compose | Marcos | `chore/grpc-rabbitmq-infra` |
 | Montar `/proto` (read-only) en los servicios gRPC | Marcos | `chore/grpc-rabbitmq-infra` |
-| MS Productos — exponer servidor gRPC `ObtenerProducto` | Stefany | `feat/grpc-productos` |
-| MS Pedidos — cliente gRPC para tomar `nombre`/`precio` reales | Mateo | `feat/grpc-rabbitmq-pedidos` |
-| MS Pedidos — publisher RabbitMQ `pedido.creado.rabbitmq` | Mateo | `feat/grpc-rabbitmq-pedidos` |
+| MS Productos — exponer servidor gRPC `ObtenerProducto` | Marcos | `feat/grpc-productos` |
+| MS Pedidos — cliente gRPC para tomar `nombre`/`precio` reales | Stefany | `feat/grpc-rabbitmq-pedidos` |
+| MS Pedidos — publisher RabbitMQ `pedido.creado.rabbitmq` | Stefany | `feat/grpc-rabbitmq-pedidos` |
 | MS Inventario — consumer RabbitMQ (`@EventPattern`) | Mateo | `feat/rabbitmq-inventario` |
-| Manejo de excepciones: error gRPC controlado (producto inexistente → 422) | Mateo (cliente) + Stefany (servidor `RpcException`) | `feat/grpc-rabbitmq-pedidos`, `feat/grpc-productos` |
+| Manejo de excepciones: error gRPC controlado (producto inexistente → 422) | Marcos (servidor `RpcException`) + Stefany (cliente `try/catch`) | `feat/grpc-productos`, `feat/grpc-rabbitmq-pedidos` |
 | Evidencias: llamada gRPC exitosa, error controlado, evento RabbitMQ consumido | Stefany | `docs/avance2` |
 | Tabla comparativa de transportes + diagrama v2 | Stefany | `docs/avance2` |
 | README sección Avance 2 (contrato, flujos, excepciones) | Stefany | `docs/avance2` |

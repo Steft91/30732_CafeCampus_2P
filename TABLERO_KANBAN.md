@@ -40,11 +40,11 @@ el orden de commits en
 |---|---|---|---|
 | [x] | Definir contrato gRPC `proto/productos.proto` (mensajes + servicio) | M | `chore/grpc-rabbitmq-infra` |
 | [x] | Agregar RabbitMQ y variables gRPC/RMQ a Docker Compose (montar `/proto`) | M | `chore/grpc-rabbitmq-infra` |
-| [x] | MS Productos — exponer servidor gRPC `ObtenerProducto` | S | `feat/grpc-productos` |
-| [x] | MS Pedidos — cliente gRPC para tomar `nombre`/`precio` reales del servidor | T | `feat/grpc-rabbitmq-pedidos` |
-| [x] | MS Pedidos — publisher RabbitMQ `pedido.creado.rabbitmq` (cola durable) | T | `feat/grpc-rabbitmq-pedidos` |
+| [x] | MS Productos — exponer servidor gRPC `ObtenerProducto` | M | `feat/grpc-productos` |
+| [x] | MS Pedidos — cliente gRPC para tomar `nombre`/`precio` reales del servidor | S | `feat/grpc-rabbitmq-pedidos` |
+| [x] | MS Pedidos — publisher RabbitMQ `pedido.creado.rabbitmq` (cola durable) | S | `feat/grpc-rabbitmq-pedidos` |
 | [x] | MS Inventario — consumer RabbitMQ (`@EventPattern`) | T | `feat/rabbitmq-inventario` |
-| [x] | Error gRPC controlado: producto inexistente → HTTP 422 sin caida | T (cliente) + S (`RpcException`) | `feat/grpc-rabbitmq-pedidos`, `feat/grpc-productos` |
+| [x] | Error gRPC controlado: producto inexistente → HTTP 422 sin caida | M (`RpcException`) + S (cliente `try/catch`) | `feat/grpc-productos`, `feat/grpc-rabbitmq-pedidos` |
 | [x] | Evidencias: llamada gRPC, evento RabbitMQ consumido, error controlado | S | `docs/avance2` |
 | [x] | Diagrama v2 + tabla comparativa de transportes + README Avance 2 | S | `docs/avance2` |
 | [ ] | Crear tag `v2-avance2` | M (release) | directo en `main` |

@@ -35,16 +35,16 @@ FASE 0  · Marcos · chore/grpc-rabbitmq-infra ───────────
           (contrato .proto + RabbitMQ en compose + tsconfig)
                                                           │
         ┌─────────────────────────────────────────────── ▼ (todos parten de main actualizado)
-FASE 1  · Stefany feat/grpc-productos          ──┐
-(paralela · Mateo   feat/grpc-rabbitmq-pedidos ──┤ dirs disjuntos → 0 conflictos → cualquier orden de merge
- sin      · Mateo   feat/rabbitmq-inventario   ──┘ (Mateo hace pedidos e inventario; sin dependencia de compilación entre sí)
+FASE 1  · Marcos   feat/grpc-productos          ──┐
+(paralela · Stefany  feat/grpc-rabbitmq-pedidos ──┤ dirs disjuntos → 0 conflictos → cualquier orden de merge
+ sin      · Mateo    feat/rabbitmq-inventario   ──┘ (Marcos: ms-productos · Stefany: ms-pedidos · Mateo: ms-inventario)
  choques)
         └─────────────────────────────────────────────── ► merge a main (los 3)
                                                           │
 FASE 2  · Stefany · docs/avance2 ───────────────────────► merge a main  ► git tag v2-avance2  (ÚLTIMO)
 ```
 
-**Quién primero:** Marcos (Fase 0) → los tres en paralelo (Fase 1) → Stefany (Fase 2).
+**Quién primero:** Marcos (Fase 0) → Fase 1 en paralelo (Marcos en Productos · Stefany en Pedidos · Mateo en Inventario) → Stefany (Fase 2).
 La Fase 2 va al final porque las evidencias (llamada gRPC, evento RabbitMQ, error controlado)
 necesitan **todo el stack corriendo** (`docker compose up -d` con RabbitMQ incluido).
 
@@ -76,7 +76,7 @@ git checkout -b chore/grpc-rabbitmq-infra
 
 ## FASE 1 — Servicios (paralela)
 
-### `feat/grpc-productos` · Stefany  *(servidor gRPC)*
+### `feat/grpc-productos` · Marcos  *(servidor gRPC)*
 
 ```bash
 git checkout main && git pull
@@ -90,13 +90,16 @@ git checkout -b feat/grpc-productos
 | 3 | `ms-productos/src/main.ts` | `feat(productos): habilitar microservicio grpc en el bootstrap` |
 
 ```bash
-# PR: feat/grpc-productos -> main   (revisa: Mateo)
+# PR: feat/grpc-productos -> main   (revisa: Stefany)
 ```
 
 > El commit 2 incluye el `RpcException(NOT_FOUND)` del servidor (mitad servidor del error
-> controlado). `main.ts` (bootstrap gRPC) va **último** para que la rama compile en cada punto.
+> controlado; la mitad cliente, el `try/catch` → 422, la hace Mateo en Pedidos). `main.ts`
+> (bootstrap gRPC) va **último** para que la rama compile en cada punto. Marcos, como dueño del
+> contrato `.proto`, implementa aquí el lado **servidor** que ese contrato define; Stefany —dueña
+> histórica de `ms-productos`— revisa el PR.
 
-### `feat/grpc-rabbitmq-pedidos` · Mateo  *(cliente gRPC + publisher RabbitMQ)*
+### `feat/grpc-rabbitmq-pedidos` · Stefany  *(cliente gRPC + publisher RabbitMQ)*
 
 ```bash
 git checkout main && git pull
@@ -111,12 +114,14 @@ git checkout -b feat/grpc-rabbitmq-pedidos
 | 4 | `ms-pedidos/src/modules/pedidos/services/pedidos.service.ts` | `feat(rabbitmq): publicar evento de pedido creado` |
 
 ```bash
-# PR: feat/grpc-rabbitmq-pedidos -> main   (revisa: Stefany)
+# PR: feat/grpc-rabbitmq-pedidos -> main   (revisa: Mateo)
 ```
 
-> Los commits 3 y 4 tocan el mismo `pedidos.service.ts` pero son pasos lógicos separables: primero
-> el cliente gRPC + `try/catch` que traduce el error a HTTP `422` (mitad cliente del error
-> controlado), luego el publisher RabbitMQ *best-effort*. Pueden unirse si se prefiere.
+> Los commits 3 y 4 tocan el mismo `pedidos.service.ts` pero son pasos lógicos separables: primero el
+> cliente gRPC + `try/catch` que traduce el error a HTTP `422` (mitad cliente del error controlado),
+> luego el publisher RabbitMQ *best-effort*. Pueden unirse si se prefiere. `feat/grpc-rabbitmq-pedidos`
+> es toda de Stefany; Mateo la revisa como contraparte, ya que su consumer de `ms-inventario` recibe
+> el evento que aquí se publica.
 
 ### `feat/rabbitmq-inventario` · Mateo  *(consumer RabbitMQ)*
 
@@ -140,11 +145,11 @@ git checkout -b feat/rabbitmq-inventario
 > **último** commit: así el tip de la rama compila con el consumer ya presente.
 
 > **Por qué las 3 ramas de Fase 1 no chocan:** cada una vive 100% dentro de su propio directorio
-> (`ms-productos/`, `ms-pedidos/`, `ms-inventario/`). Se pueden fusionar en **cualquier orden**.
-> Las dependencias (Pedidos llama a Productos por gRPC; Pedidos publica e Inventario consume por
-> RabbitMQ) son de *runtime*, no de compilación, así que no imponen orden de merge. Mateo hace dos
-> ramas: recomendable abrir el PR de `feat/rabbitmq-inventario` **antes** de probar el flujo real,
-> ya que el consumer debe existir para evidenciar el evento consumido.
+> (`ms-productos/` → Marcos · `ms-pedidos/` → Stefany · `ms-inventario/` → Mateo). Se pueden fusionar
+> en **cualquier orden**. Las dependencias (Pedidos llama a Productos por gRPC; Pedidos publica e
+> Inventario consume por RabbitMQ) son de *runtime*, no de compilación, así que no imponen orden de
+> merge. Recomendable abrir el PR de `feat/rabbitmq-inventario` **antes** de probar el flujo real, ya
+> que el consumer debe existir para evidenciar el evento consumido.
 
 ---
 
@@ -190,13 +195,13 @@ git push origin v2-avance2
 
 Todos los archivos modificados/creados del Avance 2 quedan asignados sin solaparse:
 
-| Grupo | Archivos | Rama |
-|---|---|---|
-| Contrato + infra | `proto/productos.proto`, `docker-compose.yml`, `gateway/tsconfig.json` | `chore/grpc-rabbitmq-infra` |
-| MS Productos | `ms-productos/**` (config, `main.ts`, `productos.module.ts`, `productos-grpc.controller.ts`) | `feat/grpc-productos` |
-| MS Pedidos | `ms-pedidos/**` (config, `pedido.dto.ts`, `pedidos.service.ts`) | `feat/grpc-rabbitmq-pedidos` |
-| MS Inventario | `ms-inventario/**` (config, `main.ts`, `app.module.ts`, `eventos/*`, `seed.ts`) | `feat/rabbitmq-inventario` |
-| Docs + evidencias | `docs/planificacion-avance2/**`, `docs/avance2-evidencias/**`, `docs/README.md`, `README.md`, `TABLERO_KANBAN.md` | `docs/avance2` |
+| Grupo | Archivos | Rama | Resp. |
+|---|---|---|---|
+| Contrato + infra | `proto/productos.proto`, `docker-compose.yml`, `gateway/tsconfig.json` | `chore/grpc-rabbitmq-infra` | Marcos |
+| MS Productos | `ms-productos/**` (config, `main.ts`, `productos.module.ts`, `productos-grpc.controller.ts`) | `feat/grpc-productos` | Marcos |
+| MS Pedidos | `ms-pedidos/**` (config, `pedido.dto.ts`, `pedidos.service.ts`) | `feat/grpc-rabbitmq-pedidos` | Stefany |
+| MS Inventario | `ms-inventario/**` (config, `main.ts`, `app.module.ts`, `eventos/*`, `seed.ts`) | `feat/rabbitmq-inventario` | Mateo |
+| Docs + evidencias | `docs/planificacion-avance2/**`, `docs/avance2-evidencias/**`, `docs/README.md`, `README.md`, `TABLERO_KANBAN.md` | `docs/avance2` | Stefany |
 
 > Nota: la **reorganización de evidencias del Avance 1** (mover `docs/*.png`/`.txt` a
 > `docs/avance1-evidencias/`) es un ajuste histórico ajeno al Avance 2; si el repositorio limpio ya
