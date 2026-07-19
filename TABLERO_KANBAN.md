@@ -55,10 +55,17 @@ el orden de commits en
 |---|---|---|---|
 | [x] | Login JWT base en Gateway (mock in-memory) | M | `feat/gateway` (Avance 1) |
 | [x] | Guards por rol en Gateway | M | `feat/gateway` (Avance 1) |
-| [ ] | Login real que emite JWT (200 con token / 401 / 403) | — | `feat/auth` |
-| [ ] | Integrar observabilidad (Sentry) | — | `feat/observabilidad` |
-| [ ] | Integracion final + seccion de defensa | — | `docs/avance3` |
-| [ ] | Crear tag `v3-final` | — | directo en `main` |
+| [ ] | [seguridad] Configurar expiracion JWT por variable `JWT_EXPIRES_IN` | M | `feat/auth-avance3` |
+| [ ] | [seguridad] Evidenciar login que emite JWT | S | `docs/avance3` |
+| [ ] | [seguridad] Evidenciar ruta protegida con token valido (200) | S | `docs/avance3` |
+| [ ] | [seguridad] Evidenciar ruta sin token o token invalido (401) | S | `docs/avance3` |
+| [ ] | [seguridad] Evidenciar rol sin permiso (403) | S | `docs/avance3` |
+| [ ] | [observabilidad] Integrar Sentry en Gateway | M | `feat/sentry-gateway` |
+| [ ] | [observabilidad] Capturar error controlado en panel Sentry | S | `docs/avance3` |
+| [ ] | [integracion] Validar flujo final Gateway -> Pedidos -> Productos gRPC -> RabbitMQ -> Inventario | Todos | `docs/avance3` |
+| [ ] | [compose] Adaptar `docker-compose.final.yml` al monorepo real | M | `chore/compose-final` |
+| [ ] | [docs] Consolidar README final con arquitectura, excepciones y defensa | S | `docs/avance3` |
+| [ ] | [release] Crear tag `v3-final` | M | directo en `main` |
 
 ## Estado del tablero al cierre del Avance 2
 
