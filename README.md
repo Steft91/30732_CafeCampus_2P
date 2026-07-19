@@ -3,7 +3,7 @@
 > MVP de arquitectura de microservicios · Aplicaciones Distribuidas · 7.º semestre · Entrega por avances.
 
 Cafe Campus es un sistema de cafetería universitaria construido como **monorepo de microservicios**
-(NestJS + TypeScript + Prisma + PostgreSQL). El objetivo pedagógico es **demostrar con datos reales
+(NestJS + TypeScript + Prisma + PostgreSQL) con **frontend Angular** para el demo final. El objetivo pedagógico es **demostrar con datos reales
 el acoplamiento temporal y la acumulación de latencia** entre comunicación síncrona y asíncrona.
 
 ## Equipo
@@ -25,14 +25,17 @@ en la lógica de negocio.
 - **MS Pedidos:** registra pedidos, calcula totales y coordina validación/descuento de stock.
 - **MS Inventario:** controla existencias y movimientos; expone los handlers de benchmark.
 - **API Gateway:** punto único de entrada HTTP, autenticación JWT y proxy hacia los servicios.
+- **Frontend Angular:** interfaz de demo para estudiante, mesero y admin conectada al Gateway.
 
 ## Stack
 
-- **Framework:** NestJS + TypeScript · **Estructura:** monorepo (4 apps independientes).
+- **Frontend:** Angular + TypeScript.
+- **Backend:** NestJS + TypeScript · **Estructura:** monorepo (4 apps independientes).
 - **Síncrono (Avance 1):** TCP con `@nestjs/microservices` · **Eventos (Avance 1):** Redis PUB/SUB.
 - **Avance 2:** gRPC para consulta de productos y RabbitMQ como segundo transporte asíncrono.
 - **Persistencia:** PostgreSQL (un `schema` por servicio) · **ORM:** Prisma.
-- **Seguridad base:** JWT + Guards por rol en el Gateway · **Contenedores:** Docker Compose.
+- **Seguridad base:** JWT + Guards por rol en el Gateway · **Observabilidad:** Sentry.
+- **Contenedores:** Docker Compose para backend e infraestructura; frontend local para demo.
 
 > **Equivalencia con lo visto en clase:** la guía sugiere **TypeORM**; este proyecto usa **Prisma**,
 > que cumple el mismo rol de ORM sobre PostgreSQL. El camino síncrono usa **TCP**, el primer camino
@@ -50,7 +53,14 @@ curl http://localhost:3000/api/benchmark/sync
 curl http://localhost:3000/api/benchmark/async
 ```
 
-Si se levanta una base nueva en Docker, aplicar migraciones y seeds:
+Para la entrega final con JWT/Sentry/RabbitMQ y puertos sin conflicto:
+
+```bash
+docker compose -f docker-compose.final.yml up -d
+docker compose -f docker-compose.final.yml ps
+```
+
+Si se levanta una base nueva en Docker, aplicar migraciones y seeds. Para el compose final, usar los mismos comandos agregando `-f docker-compose.final.yml`:
 
 ```bash
 docker compose exec ms-productos npx prisma migrate deploy --schema src/prisma/schema.prisma
@@ -60,6 +70,24 @@ docker compose exec ms-inventario npx prisma migrate deploy --schema src/prisma/
 docker compose exec ms-productos npm run seed
 docker compose exec -e MS_PRODUCTOS_URL=http://ms-productos:3001 ms-inventario npm run seed
 ```
+
+### Frontend Angular
+
+El frontend se ejecuta localmente y consume el Gateway en `http://localhost:3000/api`:
+
+```bash
+cd frontend
+npm install
+npm run start
+```
+
+Abrir `http://localhost:4200`. Cuentas demo:
+
+| Rol | Correo | Clave | Funcionalidad |
+|---|---|---|---|
+| Estudiante | `estudiante@campus.edu` | `est123` | Menú, carrito, creación de pedido y seguimiento de estado. |
+| Mesero | `personal@campus.edu` | `personal123` | Atención de pedidos y cambio de estados. |
+| Admin | `admin@campus.edu` | `admin123` | Administración de productos y supervisión de pedidos. |
 
 ### Opción B — Local (sin Docker)
 
@@ -89,6 +117,9 @@ cd gateway && npm run start:dev
 | PostgreSQL    | 5432                  | Base `cafe_campus` con schemas separados |
 | Redis         | 6379                  | Pub/Sub |
 | RabbitMQ      | 5672 / panel 15672    | Cola `cafe_campus_pedidos` |
+| Frontend      | 4200                  | Angular dev server |
+
+> En `docker-compose.final.yml` se exponen puertos externos alternos para evitar conflictos locales: PostgreSQL `15432`, Redis `16379`, RabbitMQ `15674/15673`, MS Productos `13001/15051`, MS Pedidos `13002/14002` y MS Inventario `13003/14003`.
 
 ## Arquitectura
 
@@ -187,6 +218,9 @@ y [`docs/planificacion-avance2/02-patrones-y-principios.md`](docs/planificacion-
 | RPC con contrato (gRPC) y contrato `.proto` compartido | Equipo, sobre `Transport.GRPC` de NestJS | 2 |
 | Pub/Sub sobre cola durable (RabbitMQ) | Equipo, sobre `Transport.RMQ` de NestJS | 2 |
 | Snapshot de producto y traducción de errores gRPC→HTTP 422 | Diseño del equipo | 2 |
+| JWT + Guards por rol | NestJS + diseño del equipo en Gateway | 3 |
+| Observabilidad de errores con Sentry | Equipo, integrado en Gateway | 3 |
+| UI por rol conectada al Gateway | Diseño del equipo con Angular | 3 |
 ---
 
 ## Avance 1 — Acoplamiento temporal y latencia · `tag v1-avance1`
@@ -310,15 +344,78 @@ Planificación técnica del avance:
 
 ## Avance 3 — Seguridad, observabilidad e integración (FINAL) · `tag v3-final`
 
-_Pendiente._ Login que emite JWT y Guard que protege rutas (200 con token / 401 sin token / 403 por
-rol), observabilidad con Sentry, integración final y sección de defensa.
+### Seguridad y roles
+
+El Gateway centraliza autenticación y autorización:
+
+- `POST /api/auth/login` emite JWT para usuarios mock de demo.
+- Rutas sin token responden `401 Unauthorized`.
+- Rutas con token válido pero rol insuficiente responden `403 Forbidden`.
+- Rutas con rol autorizado responden correctamente (`200`).
+
+Evidencias:
+
+- Login JWT: [`docs/avance3-evidencias/login-jwt.txt`](docs/avance3-evidencias/login-jwt.txt) · [`png`](docs/avance3-evidencias/login-jwt.png)
+- Ruta autorizada: [`docs/avance3-evidencias/ruta-protegida-200.txt`](docs/avance3-evidencias/ruta-protegida-200.txt) · [`png`](docs/avance3-evidencias/ruta-con-token-valido-200.png)
+- Sin token: [`docs/avance3-evidencias/ruta-sin-token-401.txt`](docs/avance3-evidencias/ruta-sin-token-401.txt) · [`png`](docs/avance3-evidencias/ruta-sin-token-401.png)
+- Rol insuficiente: [`docs/avance3-evidencias/ruta-rol-sin-permiso-403.txt`](docs/avance3-evidencias/ruta-rol-sin-permiso-403.txt) · [`png`](docs/avance3-evidencias/rol-sin-permiso-403.png)
+
+### Observabilidad
+
+El Gateway integra Sentry para capturar errores HTTP relevantes con contexto de servicio, ruta, método,
+estado y entorno. La evidencia usa un error controlado de producto inexistente que pasa por Gateway y
+queda registrado en Sentry.
+
+- Error controlado: [`docs/avance3-evidencias/error-controlado-status.txt`](docs/avance3-evidencias/error-controlado-status.txt)
+- Evento en Sentry: [`docs/avance3-evidencias/avance3-sentry-error-capturado.png`](docs/avance3-evidencias/avance3-sentry-error-capturado.png)
+- Tags/contexto: [`docs/avance3-evidencias/avance3-sentry-tags-contexto.png`](docs/avance3-evidencias/avance3-sentry-tags-contexto.png)
+
+### Integración final
+
+Flujo probado:
+
+```text
+Frontend/Postman -> Gateway JWT -> MS Pedidos -> MS Productos gRPC -> RabbitMQ -> MS Inventario
+```
+
+- Flujo integrado: [`docs/avance3-evidencias/flujo-integrado-final.txt`](docs/avance3-evidencias/flujo-integrado-final.txt) · [`png`](docs/avance3-evidencias/flujo-integrado-final.png)
+- Evento RabbitMQ: [`docs/avance3-evidencias/flujo-integrado-rabbitmq-inventario.txt`](docs/avance3-evidencias/flujo-integrado-rabbitmq-inventario.txt) · [`png`](docs/avance3-evidencias/rabbitmq-recibido-inventario.png)
+- Stack final: [`docs/avance3-evidencias/servicios-finales-ps.txt`](docs/avance3-evidencias/servicios-finales-ps.txt) · [`png`](docs/avance3-evidencias/servicios-finales.png)
+
+### Frontend de demo
+
+Se agregó una interfaz Angular para mostrar el sistema como producto usable, no solo como API:
+
+- **Estudiante:** visualiza menú disponible, agrega al carrito, crea pedidos y consulta estado.
+- **Mesero:** revisa pedidos y avanza estados de preparación.
+- **Admin:** crea productos, cambia precio, pausa/activa disponibilidad, elimina productos y supervisa pedidos.
+
+La interfaz consume exclusivamente el Gateway (`/api`) y respeta los permisos configurados por rol.
+
+### Kanban final
+
+Captura del tablero actualizado: [`docs/avance3-evidencias/avance3-kanban.png`](docs/avance3-evidencias/avance3-kanban.png).
+
+Planificación técnica del avance:
+[`runbook de demo`](docs/planificacion-avance3/01-runbook-demo.md) ·
+[`guion de defensa`](docs/planificacion-avance3/02-guion-defensa.md) ·
+[`planificación final`](docs/planificacion-avance3/README.md).
 
 ## Defensa
 
-_Pendiente (Avance 3)._
+La defensa se centra en explicar por qué cada transporte se usa en un caso distinto:
+
+- HTTP para entrada externa y pruebas simples.
+- TCP para benchmark síncrono y demostración de latencia acumulada.
+- Redis Pub/Sub para publicación rápida sin esperar consumidor.
+- gRPC para consulta tipada de productos desde pedidos.
+- RabbitMQ para evento durable de pedido creado hacia inventario.
+
+Además, se demuestra control de acceso en Gateway con JWT/roles, observabilidad con Sentry y una
+interfaz Angular que permite probar los flujos reales por rol.
 
 ## Tags de entrega
 
 - `v1-avance1` — 2026-07-14
-- `v2-avance2` — pendiente de creación tras merge final del Avance 2
-- `v3-final` — pendiente
+- `v2-avance2` — creado tras merge del Avance 2
+- `v3-final` — pendiente de creación al cerrar la entrega final

@@ -11,7 +11,8 @@ El foco del proyecto es demostrar arquitectura distribuida, transportes, segurid
 
 ## 3. Arquitectura general
 
-- API Gateway como entrada unica.
+- Frontend Angular como interfaz de demo por rol.
+- API Gateway como entrada unica para el frontend y las pruebas por API.
 - MS Productos para catalogo.
 - MS Pedidos para registrar compras.
 - MS Inventario para stock y movimientos.
@@ -40,6 +41,12 @@ Se valida seguridad con JWT y Guards por rol:
 
 Sentry captura errores relevantes para demostrar observabilidad.
 
+Además, el demo final incluye una interfaz Angular con tres roles:
+
+- estudiante: crea pedidos y revisa estado;
+- mesero: atiende pedidos y cambia estados;
+- admin: administra productos y supervisa pedidos.
+
 ## 7. Temas de clase aplicados
 
 - API Gateway.
@@ -50,6 +57,7 @@ Sentry captura errores relevantes para demostrar observabilidad.
 - gRPC con contrato.
 - Colas/eventos con RabbitMQ.
 - Observabilidad con Sentry.
+- Interfaz Angular conectada al Gateway.
 
 ## 8. Demo en vivo
 

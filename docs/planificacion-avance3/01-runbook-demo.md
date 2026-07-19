@@ -20,7 +20,25 @@ docker compose -f docker-compose.final.yml exec ms-productos npm run seed
 docker compose -f docker-compose.final.yml exec -e MS_PRODUCTOS_URL=http://ms-productos:3001 ms-inventario npm run seed
 ```
 
-## 2. Login
+## 2. Levantar frontend de demo
+
+El frontend no está dentro del compose final; se ejecuta localmente para consumir el Gateway:
+
+```bash
+cd frontend
+npm install
+npm run start
+```
+
+Abrir `http://localhost:4200` y probar las cuentas demo:
+
+| Rol | Correo | Clave | Flujo visible |
+|---|---|---|---|
+| Estudiante | `estudiante@campus.edu` | `est123` | Ver menú, agregar al carrito, crear pedido y consultar estado. |
+| Mesero | `personal@campus.edu` | `personal123` | Ver pedidos y pasar de pendiente a preparación/listo. |
+| Admin | `admin@campus.edu` | `admin123` | Crear, pausar, activar, cambiar precio o eliminar productos. |
+
+## 3. Login por API
 
 ```bash
 curl -s -X POST http://localhost:3000/api/auth/login \
@@ -28,7 +46,7 @@ curl -s -X POST http://localhost:3000/api/auth/login \
   -d '{"email":"estudiante@campus.edu","password":"est123"}' | jq
 ```
 
-## 3. Ruta protegida
+## 4. Ruta protegida
 
 Sin token debe responder `401`:
 
@@ -58,7 +76,7 @@ curl -s http://localhost:3000/api/pedidos \
   -H "Authorization: Bearer $ESTUDIANTE_TOKEN" | jq
 ```
 
-## 4. Operacion integrada
+## 5. Operacion integrada
 
 Crear un pedido desde Gateway con token de estudiante. El flujo esperado es:
 
@@ -83,7 +101,7 @@ Verificar evento:
 docker compose -f docker-compose.final.yml logs --tail=80 ms-inventario
 ```
 
-## 5. Sentry
+## 6. Sentry
 
 Provocar un error controlado y verificarlo en el panel de Sentry.
 

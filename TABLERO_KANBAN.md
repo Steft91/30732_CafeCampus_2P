@@ -55,30 +55,37 @@ el orden de commits en
 |---|---|---|---|
 | [x] | Login JWT base en Gateway (mock in-memory) | M | `feat/gateway` (Avance 1) |
 | [x] | Guards por rol en Gateway | M | `feat/gateway` (Avance 1) |
-| [ ] | [seguridad] Configurar expiracion JWT por variable `JWT_EXPIRES_IN` | M | `feat/auth-avance3` |
-| [ ] | [seguridad] Evidenciar login que emite JWT | S | `docs/avance3` |
-| [ ] | [seguridad] Evidenciar ruta protegida con token valido (200) | S | `docs/avance3` |
-| [ ] | [seguridad] Evidenciar ruta sin token o token invalido (401) | S | `docs/avance3` |
-| [ ] | [seguridad] Evidenciar rol sin permiso (403) | S | `docs/avance3` |
-| [ ] | [observabilidad] Integrar Sentry en Gateway | M | `feat/sentry-gateway` |
-| [ ] | [observabilidad] Capturar error controlado en panel Sentry | S | `docs/avance3` |
-| [ ] | [integracion] Validar flujo final Gateway -> Pedidos -> Productos gRPC -> RabbitMQ -> Inventario | Todos | `docs/avance3` |
-| [ ] | [compose] Adaptar `docker-compose.final.yml` al monorepo real | M | `chore/compose-final` |
-| [ ] | [docs] Consolidar README final con arquitectura, excepciones y defensa | S | `docs/avance3` |
+| [x] | [seguridad] Configurar expiracion JWT por variable `JWT_EXPIRES_IN` | M | `docs/avance3-preparacion` |
+| [x] | [seguridad] Evidenciar login que emite JWT | S | `docs/avance3-preparacion` |
+| [x] | [seguridad] Evidenciar ruta protegida con token valido (200) | S | `docs/avance3-preparacion` |
+| [x] | [seguridad] Evidenciar ruta sin token o token invalido (401) | S | `docs/avance3-preparacion` |
+| [x] | [seguridad] Evidenciar rol sin permiso (403) | S | `docs/avance3-preparacion` |
+| [x] | [observabilidad] Integrar Sentry en Gateway | M | `docs/avance3-preparacion` |
+| [x] | [observabilidad] Capturar error controlado en panel Sentry | S | `docs/avance3-preparacion` |
+| [x] | [integracion] Validar flujo final Gateway -> Pedidos -> Productos gRPC -> RabbitMQ -> Inventario | Todos | `docs/avance3-preparacion` |
+| [x] | [compose] Adaptar `docker-compose.final.yml` al monorepo real | M | `docs/avance3-preparacion` |
+| [x] | [frontend] Configurar proyecto Angular del demo | S | `docs/avance3-preparacion` |
+| [x] | [frontend] Implementar login demo y flujos por rol | S | `docs/avance3-preparacion` |
+| [x] | [frontend] Agregar administracion visual de productos y pedidos | S | `docs/avance3-preparacion` |
+| [x] | [frontend] Pulir interfaz con imagenes, logo, badges y estados | S | `docs/avance3-preparacion` |
+| [x] | [docs] Consolidar README final con frontend, arquitectura, excepciones y defensa | S | `docs/avance3-preparacion` |
+| [x] | [kanban] Adjuntar captura actualizada del tablero final | S | `docs/avance3-preparacion` |
 | [ ] | [release] Crear tag `v3-final` | M | directo en `main` |
 
-## Estado del tablero al cierre del Avance 2
+## Estado del tablero al cierre del Avance 3
 
 | Backlog | Por hacer | En progreso | En revision | Hecho |
 |---|---|---|---|---|
-| Avance 3: JWT+Guard real | — | — | — | Contrato `productos.proto` |
-| Avance 3: Sentry | — | — | — | RabbitMQ en Compose + variables |
-| Avance 3: integracion total | — | — | — | Servidor gRPC (MS Productos) |
-| — | — | — | — | Cliente gRPC (MS Pedidos) |
-| — | — | — | — | Publisher RabbitMQ (MS Pedidos) |
-| — | — | — | — | Consumer RabbitMQ (MS Inventario) |
-| — | — | — | — | Error gRPC controlado (422) |
-| — | — | — | — | Evidencias + README v2 + tag |
+| — | Tag `v3-final` | — | — | JWT configurable + Guards por rol |
+| — | — | — | — | Evidencias 200/401/403 |
+| — | — | — | — | Sentry integrado y evidenciado |
+| — | — | — | — | Flujo final JWT + gRPC + RabbitMQ |
+| — | — | — | — | Compose final con puertos sin conflicto |
+| — | — | — | — | Frontend Angular por roles |
+| — | — | — | — | Admin de productos desde interfaz |
+| — | — | — | — | README, runbook, guion y tablero actualizados |
 
-> Al cerrar el corte se sube una captura de este tablero a `docs/avance2-evidencias/`
-> y se enlaza en el README (lo hace Stefany en `docs/avance2`).
+Capturas del tablero:
+
+- Avance 1: `docs/avance1-evidencias/avance1-kanban.png`
+- Avance 3 final: `docs/avance3-evidencias/avance3-kanban.png`
