@@ -26,7 +26,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: cafe_campus
     ports:
-      - "5432:5432"
+      - "15432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -40,15 +40,15 @@ services:
     container_name: cafe-campus-final-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "16379:6379"
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: cafe-campus-final-rabbitmq
     restart: unless-stopped
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "15674:5672"
+      - "15673:15672"
 
   ms-productos:
     image: node:20-alpine
@@ -64,8 +64,8 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-avance3-final}
     ports:
-      - "3001:3001"
-      - "50051:50051"
+      - "13001:3001"
+      - "15051:50051"
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,8 +87,8 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-avance3-final}
     ports:
-      - "3003:3003"
-      - "4003:4003"
+      - "13003:3003"
+      - "14003:4003"
     depends_on:
       postgres:
         condition: service_healthy
@@ -116,8 +116,8 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-avance3-final}
     ports:
-      - "3002:3002"
-      - "4002:4002"
+      - "13002:3002"
+      - "14002:4002"
     depends_on:
       postgres:
         condition: service_healthy
