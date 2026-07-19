@@ -13,7 +13,7 @@ import { BenchmarkModule } from './modules/benchmark/benchmark.module';
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET ?? 'cafe-campus-secret',
-      signOptions: { expiresIn: '8h' },
+      signOptions: { expiresIn: process.env.JWT_EXPIRES_IN ?? '8h' },
     }),
     PassportModule,
     AuthModule,

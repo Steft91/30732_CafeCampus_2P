@@ -2,8 +2,12 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { initSentry } from './observability/sentry';
+import { SentryExceptionFilter } from './common/filters/sentry-exception.filter';
 
 async function bootstrap() {
+  initSentry('gateway');
+
   const app = await NestFactory.create(AppModule);
 
   // Prefijo global para todas las rutas
@@ -19,6 +23,8 @@ async function bootstrap() {
   );
 
   // CORS para el frontend Angular
+  app.useGlobalFilters(new SentryExceptionFilter());
+
   app.enableCors({
     origin: process.env.FRONTEND_URL ?? 'http://localhost:4200',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
