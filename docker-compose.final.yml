@@ -148,6 +148,7 @@ services:
       FRONTEND_URL: http://localhost:4200
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-avance3-final}
+      SENTRY_CAPTURE_HTTP_ERRORS: ${SENTRY_CAPTURE_HTTP_ERRORS:-false}
     ports:
       - "3000:3000"
     depends_on:
