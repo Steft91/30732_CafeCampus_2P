@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import { join } from 'path';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { Transport } from '@nestjs/microservices';
@@ -17,7 +16,7 @@ async function bootstrap() {
     transport: Transport.GRPC,
     options: {
       package: 'productos',
-      protoPath: join(__dirname, '../../proto/productos.proto'),
+      protoPath: process.env.PROTO_PATH ?? '/proto/productos.proto',
       url: `0.0.0.0:${process.env.GRPC_PORT ?? 50051}`,
     },
   });
